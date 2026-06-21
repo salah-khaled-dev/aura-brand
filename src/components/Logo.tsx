@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { motion } from "framer-motion";
+import { motion, type Variants } from "framer-motion";
 
 interface LogoProps {
   size?: "sm" | "md" | "lg" | "xl" | "hero" | number;
@@ -47,7 +47,7 @@ export default function Logo({
   ];
 
   // Premium Animation Setups
-  const containerVariants = {
+  const containerVariants: Variants = {
     hidden: { opacity: 0, scale: 0.98 },
     visible: {
       opacity: 1,
@@ -61,7 +61,7 @@ export default function Logo({
     }
   };
 
-  const symbolVariants = {
+  const symbolVariants: Variants = {
     hidden: { opacity: 0, pathLength: 0 },
     visible: { 
       opacity: 1, 
@@ -70,7 +70,7 @@ export default function Logo({
     }
   };
 
-  const letterVariants = {
+  const letterVariants: Variants = {
     hidden: { 
       opacity: 0,
       pathLength: 0,
