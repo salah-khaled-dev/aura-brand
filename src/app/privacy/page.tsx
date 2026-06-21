@@ -71,7 +71,7 @@ export default function PrivacyPage() {
       </LegalParagraph>
       <LegalList items={[
         "واتساب: متاح على موقعنا ضمن صفحة التواصل.",
-        "البريد الإلكتروني: privacy@aura-brand.com",
+        "البريد الإلكتروني: privacy@aura-fashion-virid.vercel.app",
         "العنوان: سان ستيفانو، الإسكندرية، جمهورية مصر العربية.",
       ]} />
 

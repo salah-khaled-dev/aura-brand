@@ -48,6 +48,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const savedCart = localStorage.getItem("aura_cart");
     const savedWishlist = localStorage.getItem("aura_wishlist");
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (savedCart) setCart(JSON.parse(savedCart));
     if (savedWishlist) setWishlist(JSON.parse(savedWishlist));
   }, []);
@@ -55,11 +56,6 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const saveCart = useCallback((newCart: CartItem[]) => {
     setCart(newCart);
     localStorage.setItem("aura_cart", JSON.stringify(newCart));
-  }, []);
-
-  const saveWishlist = useCallback((newWishlist: WishlistItem[]) => {
-    setWishlist(newWishlist);
-    localStorage.setItem("aura_wishlist", JSON.stringify(newWishlist));
   }, []);
 
   const clearCart = useCallback(() => {

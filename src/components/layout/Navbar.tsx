@@ -1,15 +1,17 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useStore } from "@/context/StoreContext";
-import { Search, Heart, ShoppingBag, X, Plus, Minus, Menu, Home, Compass, User } from "lucide-react";
-import { AnimatedCart, AnimatedHeart } from "@/components/ui/AnimatedIcon";
+import { Search, ShoppingBag, X, Plus, Minus, Menu, User, MessageCircle } from "lucide-react";
+import { PiHouseThin, PiCompassThin, PiMagnifyingGlassThin, PiHeartThin, PiHandbagThin } from "react-icons/pi";
+import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { mockProducts, Product } from "@/data/products";
 import { Skeleton } from "@/components/ui/Skeleton";
 import Logo from "@/components/Logo";
+import { getWhatsAppUrl } from "@/config/whatsapp";
 
 export default function Navbar() {
   const { cart, wishlist, cartCount, cartSubtotal, isCartOpen, setCartOpen, removeFromCart, updateQuantity } = useStore();
@@ -99,9 +101,12 @@ export default function Navbar() {
   };
 
   const leftLinks = [
-    { name: "التشكيلة الجديدة", path: "/shop" },
+    { name: "أزياء الشتاء", path: "/winter-fashion" },
+    { name: "أزياء الصيف", path: "/summer-fashion" },
+    { name: "التشكيلة", path: "/shop" },
     { name: "الفساتين", path: "/shop?category=dresses" },
     { name: "الأطقم", path: "/shop?category=sets" },
+    { name: "مجلة AURA", path: "/journal" },
   ];
 
   const rightLinks = [
@@ -187,36 +192,40 @@ export default function Navbar() {
               })}
             </nav>
 
-            {/* Action Icons - Hidden on mobile because they are in the sticky bottom nav */}
-            <div className="hidden md:flex items-center gap-1">
+            {/* Action Icons - Premium Thin Styling */}
+            <div className="hidden md:flex items-center gap-6 mr-2">
               {/* Search */}
-              <motion.button
+              <button
                 onClick={() => setSearchOpen(!isSearchOpen)}
-                whileHover={{ y: -2 }}
-                whileTap={{ scale: 0.9 }}
-                transition={{ duration: 0.18 }}
-                className="p-2.5 text-[#4A3728] hover:text-[#9A7355] transition-colors duration-300"
+                className="text-text-primary hover:text-accent transition-all duration-300 relative group"
                 aria-label="بحث"
               >
-                <Search className="w-[17px] h-[17px] stroke-[1.5]" aria-hidden="true" />
-              </motion.button>
+                <PiMagnifyingGlassThin className="w-[26px] h-[26px] transition-transform duration-300 group-hover:scale-105" />
+              </button>
 
               {/* Wishlist */}
-              <Link href="/wishlist" className="relative p-2.5" aria-label="المفضلة">
-                <AnimatedHeart
-                  active={wishlist.length > 0}
-                  size="sm"
-                />
+              <Link href="/wishlist" className="text-text-primary hover:text-accent transition-all duration-300 relative group flex items-center justify-center" aria-label="المفضلة">
+                <PiHeartThin className="w-[26px] h-[26px] transition-transform duration-300 group-hover:scale-105" />
+                {wishlist.length > 0 && (
+                  <span className="absolute -top-1 -right-2 flex min-w-[16px] h-[16px] px-1 items-center justify-center rounded-full bg-accent text-[9px] font-medium text-white shadow-sm border border-background-secondary leading-none">
+                    {wishlist.length > 9 ? "9+" : wishlist.length}
+                  </span>
+                )}
               </Link>
 
               {/* Cart */}
-              <div className="p-1">
-                <AnimatedCart
-                  count={cartCount}
-                  size="sm"
-                  onClick={() => setCartOpen(true)}
-                />
-              </div>
+              <button
+                onClick={() => setCartOpen(true)}
+                className="text-text-primary hover:text-accent transition-all duration-300 relative group flex items-center justify-center"
+                aria-label="حقيبة التسوق"
+              >
+                <PiHandbagThin className="w-[26px] h-[26px] transition-transform duration-300 group-hover:scale-105" />
+                {cartCount > 0 && (
+                  <span className="absolute -top-1 -right-2 flex min-w-[16px] h-[16px] px-1 items-center justify-center rounded-full bg-accent text-[9px] font-medium text-white shadow-sm border border-background-secondary leading-none">
+                    {cartCount > 9 ? "9+" : cartCount}
+                  </span>
+                )}
+              </button>
             </div>
           </div>
         </div>
@@ -295,6 +304,10 @@ export default function Navbar() {
                     <User className="w-5 h-5 stroke-[1]" />
                     <span className="font-sans text-xs">حسابي</span>
                   </Link>
+                  <a href={getWhatsAppUrl()} target="_blank" rel="noopener noreferrer" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 text-text-secondary hover:text-text-primary transition-colors">
+                    <MessageCircle className="w-5 h-5 stroke-[1]" />
+                    <span className="font-sans text-xs">واتساب</span>
+                  </a>
                   <button onClick={() => { setCartOpen(true); setMobileMenuOpen(false); }} className="flex items-center gap-3 text-text-secondary hover:text-text-primary transition-colors relative">
                     <span className="font-sans text-xs">الحقيبة</span>
                     <ShoppingBag className="w-5 h-5 stroke-[1]" />
@@ -447,11 +460,9 @@ export default function Navbar() {
                               onClick={closeSearch}
                               className="flex gap-3 items-center border border-brand-border/40 hover:border-accent p-2 bg-background-primary transition-all duration-300 group"
                             >
-                              <img
-                                src={product.image}
-                                alt={product.title}
-                                className="w-12 h-16 object-cover bg-background-secondary border border-brand-border/60"
-                              />
+                              <div className="relative w-12 h-16 shrink-0 bg-background-secondary border border-brand-border">
+                                <Image src={product.image} alt={product.title} fill sizes="48px" className="object-cover" />
+                              </div>
                               <div className="flex flex-col justify-center min-w-0">
                                 <h5 className="font-sans text-xs font-medium text-text-primary group-hover:text-accent transition-colors truncate max-w-[160px]">
                                   {product.title}
@@ -532,11 +543,9 @@ export default function Navbar() {
                       key={`${item.id}-${item.color}-${item.size}`}
                       className="flex gap-4 border-b border-brand-border pb-4"
                     >
-                      <img
-                        src={item.image}
-                        alt={item.title}
-                        className="w-16 h-20 object-cover bg-background-primary border border-brand-border"
-                      />
+                      <div className="relative w-20 h-24 shrink-0 bg-background-secondary border border-brand-border group-hover:border-accent transition-colors">
+                        <Image src={item.image} alt={item.title} fill sizes="80px" className="object-cover" />
+                      </div>
                       <div className="flex-grow flex flex-col justify-between">
                         <div>
                           <span className="text-[10px] text-accent font-semibold uppercase mb-1 block">
@@ -630,7 +639,7 @@ export default function Navbar() {
             pathname === "/" ? "text-accent font-medium" : "text-text-secondary hover:text-accent"
           }`}
         >
-          <Home className="w-5 h-5 stroke-[1.5]" />
+          <PiHouseThin className="w-6 h-6" />
           <span className="text-[9px] font-sans">الرئيسية</span>
         </Link>
 
@@ -640,7 +649,7 @@ export default function Navbar() {
             pathname.startsWith("/shop") ? "text-accent font-medium" : "text-text-secondary hover:text-accent"
           }`}
         >
-          <Compass className="w-5 h-5 stroke-[1.5]" />
+          <PiCompassThin className="w-6 h-6" />
           <span className="text-[9px] font-sans">التشكيلة</span>
         </Link>
 
@@ -653,7 +662,7 @@ export default function Navbar() {
             isSearchOpen ? "text-accent" : "text-text-secondary hover:text-accent"
           }`}
         >
-          <Search className="w-5 h-5 stroke-[1.5]" />
+          <PiMagnifyingGlassThin className="w-6 h-6" />
           <span className="text-[9px] font-sans">البحث</span>
         </button>
 
@@ -663,7 +672,7 @@ export default function Navbar() {
             pathname === "/wishlist" ? "text-accent font-medium" : "text-text-secondary hover:text-accent"
           }`}
         >
-          <Heart className="w-5 h-5 stroke-[1.5]" />
+          <PiHeartThin className="w-6 h-6" />
           {wishlist.length > 0 && (
             <span className="absolute top-0.5 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-accent text-[8px] font-bold text-background-secondary">
               {wishlist.length}
@@ -681,7 +690,7 @@ export default function Navbar() {
             isCartOpen ? "text-[#9A7355]" : "text-[#A89888] hover:text-[#9A7355]"
           }`}
         >
-          <ShoppingBag className="w-5 h-5 stroke-[1.5]" />
+          <PiHandbagThin className="w-6 h-6" />
           {cartCount > 0 && (
             <motion.span
               key={cartCount}

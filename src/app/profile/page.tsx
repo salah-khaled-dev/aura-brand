@@ -6,6 +6,7 @@ import { LuxuryInput } from "@/components/ui/Form";
 import Button from "@/components/ui/Button";
 import { User, Package, Settings, Ruler, Check } from "lucide-react";
 import { motion } from "framer-motion";
+import Image from "next/image";
 
 export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState("orders");
@@ -85,11 +86,15 @@ export default function ProfilePage() {
                 {/* Order Item */}
                 <div className="border border-brand-border p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                   <div className="flex gap-4 items-center">
-                    <img
+                  <div className="relative w-12 h-16 shrink-0 bg-background-primary">
+                    <Image
                       src="https://images.unsplash.com/photo-1595777457583-95e059d581b8?q=80&w=300&auto=format&fit=crop"
                       alt=""
-                      className="w-12 h-16 object-cover bg-background-primary"
+                      fill
+                      sizes="48px"
+                      className="object-cover"
                     />
+                  </div>
                     <div>
                       <span className="text-[10px] text-accent uppercase-letter-spacing font-bold">مكتمل الشحن</span>
                       <h4 className="text-serif text-sm font-light mt-0.5">فستان أورا من الحرير بفتحة كتف راقية</h4>

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { MessageCircle, Mail, MapPin, Clock } from "lucide-react";
 import Button from "@/components/ui/Button";
+import { getWhatsAppUrl, WHATSAPP_CONFIG } from "@/config/whatsapp";
 
 export const metadata: Metadata = {
   title: "تواصلي معنا | AURA",
@@ -9,8 +10,8 @@ export const metadata: Metadata = {
 };
 
 const contactItems = [
-  { icon: MessageCircle, title: "واتساب المستشارة", text: "+20 100 000 0000", href: "https://wa.me/201000000000?text=%D9%85%D8%B1%D8%AD%D8%A8%D8%A7%D9%8B%D8%8C%20%D8%A3%D8%B1%D9%8A%D8%AF%20%D8%A7%D9%84%D8%A7%D8%B3%D8%AA%D9%81%D8%B3%D8%A7%D8%B1%20%D8%B9%D9%86%20%D9%85%D9%86%D8%AA%D8%AC%D8%A7%D8%AA%20AURA" },
-  { icon: Mail, title: "البريد الإلكتروني", text: "care@aura-brand.com", href: "mailto:care@aura-brand.com" },
+  { icon: MessageCircle, title: "واتساب المستشارة", text: `+${WHATSAPP_CONFIG.phoneNumber}`, href: getWhatsAppUrl() },
+  { icon: Mail, title: "البريد الإلكتروني", text: "care@aura-fashion-virid.vercel.app", href: "mailto:care@aura-fashion-virid.vercel.app" },
   { icon: MapPin, title: "أتيلييه AURA", text: "سان ستيفانو، الإسكندرية، مصر", href: "#atelier" },
   { icon: Clock, title: "مواعيد العناية", text: "يوميًا من 11 صباحًا حتى 8 مساءً", href: "#hours" },
 ];
@@ -46,7 +47,7 @@ export default function ContactPage() {
             أرسلي لنا اسم القطعة أو صورة المنتج، وسنساعدكِ في اختيار المقاس الأنسب وتأكيد مدة التجهيز والتسليم قبل الدفع.
           </p>
           <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-            <a href="https://wa.me/201000000000?text=%D9%85%D8%B1%D8%AD%D8%A8%D8%A7%D9%8B%D8%8C%20%D8%A3%D8%B1%D9%8A%D8%AF%20%D8%A7%D9%84%D8%A7%D8%B3%D8%AA%D9%81%D8%B3%D8%A7%D8%B1%20%D8%B9%D9%86%20%D9%85%D9%86%D8%AA%D8%AC%D8%A7%D8%AA%20AURA" target="_blank" rel="noopener noreferrer">
+            <a href={getWhatsAppUrl()} target="_blank" rel="noopener noreferrer">
               <Button variant="primary">بدء محادثة واتساب</Button>
             </a>
             <Link href="/shop">

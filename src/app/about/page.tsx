@@ -4,6 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import Button from "@/components/ui/Button";
+import Image from "next/image";
 
 export default function AboutPage() {
   const values = [
@@ -34,10 +35,13 @@ export default function AboutPage() {
       
       {/* 1. HERO SECTION - Full-width campaign image, large elegant headline */}
       <section className="w-full max-w-[1440px] relative h-[50vh] md:h-[65vh] flex items-center justify-center overflow-hidden border-b border-brand-border bg-background-secondary">
-        <img
+        <Image
           src="https://images.unsplash.com/photo-1595777457583-95e059d581b8?q=80&w=1600&auto=format&fit=crop"
           alt="حملة أورا الكلاسيكية"
-          className="absolute inset-0 w-full h-full object-cover opacity-90"
+          fill
+          priority
+          sizes="100vw"
+          className="object-cover opacity-90"
         />
         <div className="absolute inset-0 bg-text-primary/10 pointer-events-none" />
         
@@ -78,10 +82,12 @@ export default function AboutPage() {
 
           {/* Left Tall Image */}
           <div className="relative aspect-[3/4] w-full overflow-hidden border border-brand-border bg-background-secondary">
-            <img
+            <Image
               src="https://images.unsplash.com/photo-1539109136881-3be0616acf4b?q=80&w=800&auto=format&fit=crop"
               alt="فلسفة التصميم"
-              className="w-full h-full object-cover"
+              fill
+              sizes="(max-width: 768px) 100vw, 50vw"
+              className="object-cover"
             />
           </div>
 
@@ -129,7 +135,7 @@ export default function AboutPage() {
           <div className="flex flex-col items-start gap-4 text-right">
             <span className="font-sans text-[10px] text-accent font-bold uppercase">رؤية الدار</span>
             <blockquote className="font-sans text-2xl md:text-3xl lg:text-4xl font-light italic text-text-primary leading-snug">
-              "رؤيتنا أن نقدم للمرأة قطعًا تعكس شخصيتها وتمنحها حضورًا استثنائيًا"
+              &quot;رؤيتنا أن نقدم للمرأة قطعًا تعكس شخصيتها وتمنحها حضورًا استثنائيًا&quot;
             </blockquote>
             <span className="font-sans text-xs text-text-secondary font-bold block mt-2">
               — منسقو ومصممو أتيلييه أورا الإسكندرية
@@ -138,10 +144,12 @@ export default function AboutPage() {
 
           {/* Portrait side */}
           <div className="relative aspect-[3/4] w-full overflow-hidden border border-brand-border bg-background-primary">
-            <img
+            <Image
               src="https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=800&auto=format&fit=crop"
               alt="رؤية مصممينا"
-              className="w-full h-full object-cover"
+              fill
+              sizes="(max-width: 768px) 100vw, 50vw"
+              className="object-cover"
             />
           </div>
 

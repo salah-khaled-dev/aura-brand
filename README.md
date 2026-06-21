@@ -1,117 +1,66 @@
-# AURA ✨
-## Luxury Women's Fashion E-Commerce Website
+# AURA | Luxury Fashion & Haute Couture
 
-AURA is a premium modern fashion e-commerce experience built for a women's fashion brand.
-The project focuses on elegant design, smooth interactions, responsive layouts, and a luxury shopping experience across all devices.
+![AURA Logo](public/aura_logo_horizontal.svg)
 
----
+AURA is a modern, ultra-premium luxury fashion e-commerce platform built for the 2026 modern woman. It delivers an editorial, high-end shopping experience focused on haute couture, quiet luxury, and timeless elegance.
 
-## ✨ Project Overview
+## 🌟 Key Features
 
-AURA is designed to deliver a high-end fashion website experience inspired by modern luxury fashion houses.
+- **Premium Editorial Design**: A minimalist, high-end aesthetic inspired by top global luxury brands.
+- **Dynamic Product Discovery**: 
+  - *Complete The Look*: Curated recommendations to match sets and dresses.
+  - *Recently Viewed*: Intelligent tracking of user's browsing history using local storage.
+  - *Size Recommendation Engine*: Smart size suggestions based on height and weight.
+- **Immersive Journal**: Fashion editorial articles highlighting seasonal trends and luxury styling tips.
+- **High Performance**: Optimized with Next.js App Router, `next/image` for responsive media, and lazy-loaded components.
+- **Production Ready SEO**: Fully dynamic OpenGraph tags, Canonical URLs, automated `sitemap.xml`, and JSON-LD structured data for products.
+- **Accessibility**: Built to meet WCAG AA compliance with proper semantic HTML and keyboard navigation.
 
-The website includes:
-- Premium hero experience
-- Elegant product showcase
-- Luxury brand storytelling
-- Smooth animations
-- Responsive mobile-first design
-- Modern shopping experience
+## 💻 Tech Stack
 
----
+- **Framework**: [Next.js 14+] (App Router)
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS
+- **Animations**: Framer Motion
+- **Icons**: Lucide React
+- **State Management**: React Context API & Custom Hooks
 
-## 🚀 Features
+## 🚀 Getting Started
 
-### 🖤 Premium UI / UX
-- Luxury fashion inspired design
-- Modern editorial layouts
-- Elegant typography system
-- Fully responsive experience
+### Prerequisites
+- Node.js 18.x or later
+- npm or yarn
 
-### 🛍️ E-Commerce Experience
-- Product browsing
-- Product cards
-- Wishlist system
-- Shopping cart
-- Search experience
-- Order tracking
+### Installation
+1. Clone the repository
+```bash
+git clone https://github.com/EngSalahKhaled/aura-brand.git
+```
 
-### 🎨 Design System
-- Premium color palette
-- Custom brand identity
-- Modern icon system
-- Smooth hover interactions
-- Micro animations
+2. Install dependencies
+```bash
+npm install
+```
 
-### 📱 Responsive Design
-Optimized for:
+3. Run the development server
+```bash
+npm run dev
+```
 
-- Mobile devices
-- Tablets
-- Desktop screens
+4. Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-Tested on:
-- 320px
-- 375px
-- 414px
-- Large desktop screens
+## 📈 Production Build & Vercel Deployment
 
----
+The project is fully optimized for Vercel deployment. It includes `generateMetadata` for dynamic SEO, robots configuration, and structured data schemas.
 
-## ⚡ Performance Optimization
+To build the project locally for production:
+```bash
+npm run build
+npm start
+```
 
-The project includes production-level optimizations:
+## 🎨 Design Philosophy
+AURA avoids generic e-commerce layouts. The interface utilizes generous whitespace, elegant serif typography, subtle micro-animations, and a curated color palette (Bronze, Ivory, Charcoal) to evoke a sense of exclusivity and calm.
 
-- Optimized React rendering
-- Reduced unnecessary re-renders
-- Lazy loading components
-- Optimized images
-- Responsive image loading
-- Smooth 60fps animations
-- Improved Core Web Vitals
-
----
-
-## 🎬 Animations
-
-Built with modern animation techniques:
-
-- Hero cinematic animations
-- Scroll reveal effects
-- Smooth transitions
-- Hover interactions
-- Premium micro animations
-
-Powered by:
-
-- Framer Motion
-
----
-
-## 🧩 Tech Stack
-
-### Frontend
-
-- React
-- Next.js
-- TypeScript
-- Tailwind CSS
-
-### UI & Animation
-
-- Framer Motion
-- React Icons / Lucide Icons
-
-### State Management
-
-- Context API / Custom Store
-
-### Development Tools
-
-- ESLint
-- TypeScript
-- Git
-
----
-
-## 📂 Project Structure
+## 📄 License
+This project is proprietary and intended for AURA Luxury Fashion. All rights reserved.

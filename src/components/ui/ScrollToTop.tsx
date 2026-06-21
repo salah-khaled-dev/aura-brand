@@ -13,7 +13,8 @@ export default function ScrollToTop() {
     const scrollY = window.scrollY;
     const docHeight = document.documentElement.scrollHeight - window.innerHeight;
 
-    setVisible(scrollY > 380);
+    // Appear after approximately 50% page scroll
+    setVisible(docHeight > 0 && scrollY > docHeight * 0.45);
     setProgress(docHeight > 0 ? Math.min(scrollY / docHeight, 1) : 0);
   }, []);
 

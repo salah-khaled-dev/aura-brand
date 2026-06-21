@@ -61,15 +61,6 @@ export default function Logo({
     }
   };
 
-  const symbolVariants: Variants = {
-    hidden: { opacity: 0, pathLength: 0 },
-    visible: { 
-      opacity: 1, 
-      pathLength: 1, 
-      transition: { duration: 2, ease: [0.25, 0.1, 0.25, 1] as const } 
-    }
-  };
-
   const letterVariants: Variants = {
     hidden: { 
       opacity: 0,
@@ -98,12 +89,10 @@ export default function Logo({
         style={styleObj}
         className={`w-auto ${heightClass} ${colorClass} ${className}`}
       >
-        <g transform="translate(10, 10)">
-          <circle cx="40" cy="40" r="38" stroke="#D4AF37" strokeWidth="1" fill="none" />
-          <path d="M 40,15 L 20,65 M 40,15 L 60,65 M 28,50 L 52,50" stroke="#D4AF37" strokeWidth="1.5" fill="none" />
-          <path d="M 40,65 L 20,15 M 40,65 L 60,15" stroke="currentColor" strokeWidth="1.5" fill="none" />
+        <g transform="translate(0, -20)">
+          <image href="/aura-logo.png" x="0" y="0" width="140" height="140" style={{ mixBlendMode: 'multiply', filter: 'drop-shadow(0px 4px 6px rgba(212,175,55,0.2))' }} />
         </g>
-        <g transform="translate(110, 0)">
+        <g transform="translate(125, 0)">
           {wordmarkPaths.map((path, idx) => (
             <path key={idx} d={path} />
           ))}
@@ -121,12 +110,20 @@ export default function Logo({
       animate="visible"
       className={`w-auto ${heightClass} ${colorClass} ${className}`}
     >
-      <g transform="translate(10, 10)">
-        <motion.circle cx="40" cy="40" r="38" stroke="#D4AF37" strokeWidth="1" fill="none" variants={symbolVariants} />
-        <motion.path d="M 40,15 L 20,65 M 40,15 L 60,65 M 28,50 L 52,50" stroke="#D4AF37" strokeWidth="1.5" fill="none" variants={symbolVariants} />
-        <motion.path d="M 40,65 L 20,15 M 40,65 L 60,15" stroke="currentColor" strokeWidth="1.5" fill="none" variants={symbolVariants} />
+      <g transform="translate(0, -20)">
+        <motion.image 
+          href="/aura-logo.png" 
+          x="0" 
+          y="0" 
+          width="140" 
+          height="140" 
+          style={{ mixBlendMode: 'multiply', filter: 'drop-shadow(0px 4px 10px rgba(212,175,55,0.4))' }} 
+          initial={{ opacity: 0, scale: 0.7, rotate: -8, y: 15, filter: "blur(10px)" }} 
+          animate={{ opacity: 1, scale: 1, rotate: 0, y: 0, filter: "blur(0px)" }} 
+          transition={{ duration: 1.8, delay: 0.2, ease: [0.16, 1, 0.3, 1] }} 
+        />
       </g>
-      <g transform="translate(110, 0)">
+      <g transform="translate(125, 0)">
         {wordmarkPaths.map((path, idx) => (
           <motion.path
             key={idx}

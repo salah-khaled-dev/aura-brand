@@ -273,5 +273,130 @@ export const mockProducts: Product[] = [
         ]
       }
     ]
+  },
+  {
+    id: "7",
+    title: "معطف شتوي من الكشمير الفاخر",
+    price: 6500,
+    image: "https://images.unsplash.com/photo-1539533113208-f6df8cc8b543?q=80&w=800&auto=format&fit=crop",
+    hoverImage: "https://images.unsplash.com/photo-1544441893-675973e31985?q=80&w=800&auto=format&fit=crop",
+    collection: "أزياء الشتاء",
+    badge: "جديد",
+    description: "معطف شتوي يجمع بين الدفء الاستثنائي والأناقة، مصنوع من الكشمير الخالص المنسوج بحرفية عالية.",
+    details: [
+      "كشمير طبيعي 100%",
+      "بطانة حريرية ناعمة",
+      "حزام خصر عريض لضبط المقاس",
+      "تصميم طويل يمنحكِ الهيبة والدفء"
+    ],
+    fabric: "كشمير إيطالي نقي يوفر دفئاً فائقاً بوزن خفيف.",
+    packaging: "يُسلم بغلاف مقاوم للعوامل الجوية داخل صندوق أورا المخملي.",
+    colors: ["جملي", "أسود", "رمادي"],
+    sizes: ["S", "M", "L", "XL"],
+    variants: [
+      {
+        color: "جملي",
+        value: "#C19A6B",
+        images: ["https://images.unsplash.com/photo-1539533113208-f6df8cc8b543?q=80&w=800&auto=format&fit=crop"]
+      }
+    ]
+  },
+  {
+    id: "8",
+    title: "فستان صيفي خفيف من القطن والكتان",
+    price: 2100,
+    image: "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=800&auto=format&fit=crop",
+    hoverImage: "https://images.unsplash.com/photo-1529139574466-a303027c1d8b?q=80&w=800&auto=format&fit=crop",
+    collection: "أزياء الصيف",
+    badge: "الأكثر مبيعاً",
+    description: "فستان صيفي يتميز بنعومة فائقة وتصميم يتيح حرية الحركة وانتعاشاً في أيام الصيف الحارة.",
+    details: [
+      "مزيج قطن وكتان ناعم ومسامي",
+      "تصميم بكسرات انسيابية",
+      "ياقة V ناعمة",
+      "مثالي لأوقات النهار والمساء"
+    ],
+    fabric: "قطن مصري ممتاز ممزوج بالكتان لتقليل التجعد.",
+    packaging: "يُسلم في حافظة قطنية صديقة للبيئة.",
+    colors: ["أبيض", "أزرق فاتح", "وردي"],
+    sizes: ["XS", "S", "M", "L", "XL"],
+    variants: [
+      {
+        color: "أبيض",
+        value: "#FFFFFF",
+        images: ["https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=800&auto=format&fit=crop"]
+      }
+    ]
+  },
+  {
+    id: "9",
+    title: "طقم كلاسيكي قطعتين من الحرير والكتان",
+    price: 3200,
+    image: "https://images.unsplash.com/photo-1539109136881-3be0616acf4b?q=80&w=800&auto=format&fit=crop",
+    hoverImage: "https://images.unsplash.com/photo-1544441893-675973e31985?q=80&w=800&auto=format&fit=crop",
+    collection: "أطقم",
+    badge: "مخيط يدوياً",
+    description: "طقم الأناقة العصرية يجمع بين بنطلون كلاسيكي وبلوزة متناسقة، يمنحك حضوراً رسمياً بطابع فخم ومريح.",
+    details: [
+      "مزيج من الكتان والحرير الفاخر",
+      "بنطلون بقصة مستقيمة",
+      "بلوزة بأزرار مخفية",
+      "تصميم هندسي دقيق"
+    ],
+    fabric: "كتان ممزوج بالحرير للحصول على مظهر انسيابي وثابت.",
+    packaging: "يُسلم بصندوق أورا المخملي.",
+    colors: ["رمادي داكن", "بيج"],
+    sizes: ["XS", "S", "M", "L"],
+    variants: [
+      {
+        color: "رمادي داكن",
+        value: "#4B4B4B",
+        images: ["https://images.unsplash.com/photo-1539109136881-3be0616acf4b?q=80&w=800&auto=format&fit=crop"]
+      }
+    ]
+  },
+  {
+    id: "10",
+    title: "حقيبة سهرة كلاسيكية ذهبية",
+    price: 4500,
+    image: "https://images.unsplash.com/photo-1584916201218-f4242ceb4809?q=80&w=800&auto=format&fit=crop",
+    hoverImage: "https://images.unsplash.com/photo-1591561954557-26941169b49e?q=80&w=800&auto=format&fit=crop",
+    collection: "حقائب",
+    badge: "قطعة أساسية",
+    description: "حقيبة سهرة صلبة كلاسيكية باللون الذهبي اللامع، مصممة لتكمل إطلالتك بفخامة. تتسع لاحتياجاتك الأساسية مع سلسلة ذهبية رقيقة.",
+    details: ["معدن مطلي بماء الذهب المطفأ", "بطانة داخلية من الحرير الأصلي", "قفل هندسي أيقوني"],
+    fabric: "معدن فاخر مضاد للخدش",
+    packaging: "تُسلم في حقيبة قطنية ناعمة داخل صندوق أورا.",
+    colors: ["ذهبي"],
+    sizes: ["One Size"]
+  },
+  {
+    id: "11",
+    title: "حذاء كعب عالي كلاسيكي أسود",
+    price: 3200,
+    image: "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?q=80&w=800&auto=format&fit=crop",
+    hoverImage: "https://images.unsplash.com/photo-1551107696-a4b0c5a0d9a2?q=80&w=800&auto=format&fit=crop",
+    collection: "أحذية",
+    badge: "حصري",
+    description: "حذاء كعب عالي (Stiletto) بجلد طبيعي لامع. قصة مدببة تبرز أنوثة القدمين ومثالي لإطلالات المساء.",
+    details: ["جلد عجل طبيعي 100%", "كعب بارتفاع 9 سم", "نعل مريح مبطن"],
+    fabric: "جلد طبيعي لامع",
+    packaging: "يُسلم في صندوق أحذية أورا الفاخر.",
+    colors: ["أسود"],
+    sizes: ["37", "38", "39", "40", "41"]
+  },
+  {
+    id: "12",
+    title: "قلادة كوتور ذهبية بطبقات متدلية",
+    price: 2100,
+    image: "https://images.unsplash.com/photo-1599643478524-fb66f7ca065b?q=80&w=800&auto=format&fit=crop",
+    hoverImage: "https://images.unsplash.com/photo-1611591437281-460bfbe1220a?q=80&w=800&auto=format&fit=crop",
+    collection: "مجوهرات",
+    description: "قلادة رقيقة بطبقات متدلية تبرز جمال منطقة العنق بشكل مثالي مع الفساتين ذات الفتحات الكلاسيكية والياقات المفتوحة.",
+    details: ["نحاس مطلي بذهب عيار 18", "تصميم بطبقتين مع تعليقة دائرية هندسية", "خالية من النيكل ومقاومة للتحسس"],
+    fabric: "مطلي بالذهب",
+    packaging: "تُسلم في علبة مجوهرات أورا الفاخرة.",
+    colors: ["ذهبي"],
+    sizes: ["One Size"]
   }
 ];

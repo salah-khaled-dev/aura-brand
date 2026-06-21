@@ -10,6 +10,7 @@ import WhatsAppButton from "@/components/ui/WhatsAppButton";
 // Lazy load Footer for faster initial page render (TTI)
 const Footer = dynamic(() => import("@/components/layout/Footer"), { ssr: true });
 import ScrollToTop from "@/components/ui/ScrollToTopClient";
+import ScrollProgressClient from "@/components/ui/ScrollProgressClient";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -39,7 +40,7 @@ const playfairDisplay = Playfair_Display({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://aura-brand.com"),
+  metadataBase: new URL("https://aura-fashion-virid.vercel.app"),
   title: "AURA | دار الأزياء المصرية الراقية",
   description: "أورا - دار أزياء نسائية مصرية فاخرة تقدم مفهومًا متطورًا للأناقة والأنوثة العصرية بأيدي حرفية متقنة وتفاصيل فريدة.",
   keywords: ["AURA", "أورا", "أزياء نسائية", "كوتور", "ملابس فاخرة", "أزياء مصرية"],
@@ -87,6 +88,7 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col bg-background-primary text-text-primary selection:bg-accent selection:text-background-secondary overflow-x-hidden w-full">
         <NotificationProvider>
           <StoreProvider>
+            <ScrollProgressClient />
             <Navbar />
             <main className="flex-grow">{children}</main>
             <Footer />

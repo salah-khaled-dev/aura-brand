@@ -45,7 +45,7 @@ export const analytics = {
     );
   },
 
-  trackPurchaseSuccess: (orderId: string, cartItems: any[], subtotal: number, paymentMethod: string) => {
+  trackPurchaseSuccess: (orderId: string, cartItems: { title: string; color?: string; size?: string; quantity: number }[], subtotal: number, paymentMethod: string) => {
     console.log(
       `%c[AURA Analytics]%c Purchase Complete Event`,
       LOG_PREFIX_STYLE,

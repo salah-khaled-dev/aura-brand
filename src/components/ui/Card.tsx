@@ -29,11 +29,10 @@ export const ProductCard = React.memo(function ProductCard({
   collection,
   variants,
 }: ProductCardProps) {
-  const { toggleWishlist, isInWishlist, addToCart } = useStore();
+  const { toggleWishlist, isInWishlist } = useStore();
   const { showNotification } = useNotification();
   const router = useRouter();
   const wishlisted = isInWishlist(id);
-  const [hovered, setHovered] = useState(false);
   const [currentImage, setCurrentImage] = useState(image);
 
   useEffect(() => {
@@ -62,8 +61,6 @@ export const ProductCard = React.memo(function ProductCard({
       viewport={{ once: true, margin: "200px" }}
       transition={{ duration: 0.6 }}
       className="group relative flex flex-col w-full bg-transparent cursor-pointer"
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
     >
       {/* 1. Large Image Frame - Image Dominates */}
       <div className="relative aspect-[3/4] w-full overflow-hidden bg-background-secondary border border-brand-border/40">

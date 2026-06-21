@@ -50,11 +50,11 @@ const hoverVariantStyles: Record<IconVariant, string> = {
 export type IconSize = "xs" | "sm" | "md" | "lg" | "xl";
 
 const sizeMap: Record<IconSize, { icon: number; stroke: string; touch: string }> = {
-  xs: { icon: 14, stroke: "stroke-[1.5]", touch: "w-8 h-8"   },
-  sm: { icon: 16, stroke: "stroke-[1.5]", touch: "w-9 h-9"   },
-  md: { icon: 18, stroke: "stroke-[1.5]", touch: "w-10 h-10" },
-  lg: { icon: 22, stroke: "stroke-[1.25]",touch: "w-11 h-11" },
-  xl: { icon: 26, stroke: "stroke-[1]",   touch: "w-12 h-12" },
+  xs: { icon: 16, stroke: "stroke-[1]", touch: "w-8 h-8"   },
+  sm: { icon: 20, stroke: "stroke-[1]", touch: "w-9 h-9"   },
+  md: { icon: 24, stroke: "stroke-[1]", touch: "w-10 h-10" },
+  lg: { icon: 28, stroke: "stroke-[1]", touch: "w-11 h-11" },
+  xl: { icon: 32, stroke: "stroke-[1]", touch: "w-12 h-12" },
 };
 
 /* ─────────────────────────────────────────────────
@@ -123,7 +123,7 @@ export function AnimatedIcon({
         aria-hidden="true"
       />
       {badge !== undefined && badge > 0 && (
-        <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#9A7355] text-[8px] font-bold text-white leading-none">
+        <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-accent text-[8px] font-medium text-white leading-none border border-background-secondary shadow-sm">
           {badge > 9 ? "9+" : badge}
         </span>
       )}
@@ -219,7 +219,7 @@ export function AnimatedCart({ count = 0, size = "md", onClick, variant = "defau
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
           transition={{ type: "spring", stiffness: 500, damping: 18 }}
-          className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#9A7355] text-[8px] font-bold text-white leading-none"
+          className="absolute -top-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-accent text-[8px] font-medium text-white leading-none border border-background-secondary shadow-sm"
         >
           {count > 9 ? "9+" : count}
         </motion.span>

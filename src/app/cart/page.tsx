@@ -2,6 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useStore } from "@/context/StoreContext";
 import { ShoppingBag, Plus, Minus, X } from "lucide-react";
 import Button from "@/components/ui/Button";
@@ -49,11 +50,15 @@ export default function CartPage() {
                   key={`${item.id}-${item.size}-${item.color}`}
                   className="flex gap-4 md:gap-6 border-b border-brand-border pb-6 last:border-b-0 last:pb-0"
                 >
-                  <img
-                    src={item.image}
-                    alt={item.title}
-                    className="w-20 h-28 object-cover bg-background-primary border border-brand-border"
-                  />
+                  <div className="relative w-20 h-28 shrink-0 bg-background-primary border border-brand-border">
+                    <Image
+                      src={item.image}
+                      alt={item.title}
+                      fill
+                      sizes="80px"
+                      className="object-cover"
+                    />
+                  </div>
                   
                   <div className="flex-grow flex flex-col justify-between">
                     <div>

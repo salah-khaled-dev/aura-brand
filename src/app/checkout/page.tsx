@@ -9,6 +9,7 @@ import { LuxuryInput, LuxurySelect } from "@/components/ui/Form";
 import Button from "@/components/ui/Button";
 import { analytics } from "@/utils/analytics";
 import { CheckCircle, Truck, ShieldAlert, Loader2, ArrowLeft, ArrowRight, Package } from "lucide-react";
+import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function CheckoutPage() {
@@ -40,7 +41,7 @@ export default function CheckoutPage() {
     if (cart.length > 0) {
       analytics.trackCheckoutStart(cart.length, cartSubtotal);
     }
-  }, []);
+  }, [cart.length, cartSubtotal]);
 
   const governorateOptions = [
     { value: "cairo", label: "القاهرة" },
@@ -463,7 +464,9 @@ export default function CheckoutPage() {
               <div className="flex flex-col gap-4 border-b border-brand-border pb-4 max-h-[220px] overflow-y-auto scrollbar-none">
                 {cart.map((item) => (
                   <div key={`${item.id}-${item.color}-${item.size}`} className="flex gap-4 items-center">
-                    <img src={item.image} alt="" className="w-10 h-14 object-cover bg-background-primary border border-brand-border" />
+                    <div className="relative w-10 h-14 shrink-0 bg-background-primary border border-brand-border">
+                      <Image src={item.image} alt="" fill sizes="40px" className="object-cover" />
+                    </div>
                     <div className="flex-grow min-w-0">
                       <h4 className="font-sans text-xs font-medium truncate max-w-[160px]">{item.title}</h4>
                       <span className="text-[10px] text-text-secondary font-light block mt-0.5">

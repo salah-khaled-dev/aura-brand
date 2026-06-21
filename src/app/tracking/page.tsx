@@ -5,7 +5,8 @@ import { useSearchParams } from "next/navigation";
 import { LuxuryInput } from "@/components/ui/Form";
 import Button from "@/components/ui/Button";
 import { motion, AnimatePresence } from "framer-motion";
-import { HelpCircle, AlertCircle, RefreshCw, Search, Heart, Package } from "lucide-react";
+import { Search, AlertCircle, RefreshCw } from "lucide-react";
+import Image from "next/image";
 import { TrackingResultSkeleton } from "@/components/ui/Skeleton";
 
 // Sub-component that consumes search params
@@ -13,18 +14,46 @@ function TrackingContent() {
   const searchParams = useSearchParams();
   const [orderId, setOrderId] = useState("");
   const [contact, setContact] = useState("");
-  const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [status, setStatus] = useState<"idle" | "loading" | "success" | "error" | "found">("idle");
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [searchedOrder, setSearchedOrder] = useState<any>(null);
 
   // Auto load query parameter if present
   useEffect(() => {
     const idParam = searchParams.get("id");
     if (idParam) {
-      setOrderId(idParam);
-      // Automatically trigger simulated search
+      const id = idParam.trim().toUpperCase();
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setOrderId(id);
       setStatus("loading");
       setTimeout(() => {
-        performSearch(idParam);
+        if (id.length === 10 && id.startsWith("AU")) {
+          setSearchedOrder({
+            id: id,
+            status: "shipped",
+            date: "14 يونيو 2026",
+            expectedDelivery: "16 يونيو 2026",
+            items: [
+              {
+                title: "فستان سهرة كلاسيك ميدي",
+                color: "برونزي",
+                size: "M",
+                image: "https://images.unsplash.com/photo-1595777457583-95e059d581b8?q=80&w=800&auto=format&fit=crop",
+              }
+            ],
+            shippingAddress: "التجمع الخامس، القاهرة الجديدة",
+            timeline: [
+              { status: "تم استلام الطلب", date: "14 يونيو 2026", completed: true },
+              { status: "جاري التجهيز في الأتيلييه", date: "15 يونيو 2026", completed: true },
+              { status: "تم الشحن", date: "15 يونيو 2026", completed: true },
+              { status: "في الطريق للتوصيل", date: "", completed: false },
+              { status: "تم التسليم", date: "", completed: false },
+            ]
+          });
+          setStatus("found");
+        } else {
+          setStatus("error");
+        }
       }, 1200);
     }
   }, [searchParams]);
@@ -80,7 +109,34 @@ function TrackingContent() {
 
     setStatus("loading");
     setTimeout(() => {
-      performSearch(orderId);
+      const id = orderId.trim().toUpperCase();
+      if (id.length === 10 && id.startsWith("AU")) {
+        setSearchedOrder({
+          id: id,
+          status: "shipped",
+          date: "14 يونيو 2026",
+          expectedDelivery: "16 يونيو 2026",
+          items: [
+            {
+              title: "فستان سهرة كلاسيك ميدي",
+              color: "برونزي",
+              size: "M",
+              image: "https://images.unsplash.com/photo-1595777457583-95e059d581b8?q=80&w=800&auto=format&fit=crop",
+            }
+          ],
+          shippingAddress: "التجمع الخامس، القاهرة الجديدة",
+          timeline: [
+            { status: "تم استلام الطلب", date: "14 يونيو 2026", completed: true },
+            { status: "جاري التجهيز في الأتيلييه", date: "15 يونيو 2026", completed: true },
+            { status: "تم الشحن", date: "15 يونيو 2026", completed: true },
+            { status: "في الطريق للتوصيل", date: "", completed: false },
+            { status: "تم التسليم", date: "", completed: false },
+          ]
+        });
+        setStatus("found");
+      } else {
+        performSearch(orderId);
+      }
     }, 1200);
   };
 
@@ -211,7 +267,7 @@ function TrackingContent() {
                   {/* Desktop connecting line */}
                   <div className="absolute top-1/2 left-4 right-4 h-[1px] bg-brand-border -translate-y-1/2 -z-10 hidden md:block" />
                   
-                  {steps.map((step, idx) => {
+                  {steps.map((step) => {
                     return (
                       <div
                         key={step.num}
@@ -244,11 +300,13 @@ function TrackingContent() {
               {/* 4. Order Information Card */}
               <div className="bg-background-secondary border border-brand-border p-6 md:p-8 grid grid-cols-1 md:grid-cols-[100px_1fr] gap-6 items-center">
                 {/* Product Thumbnail */}
-                <div className="aspect-[3/4] w-20 md:w-24 overflow-hidden border border-brand-border bg-background-primary mx-auto md:mx-0">
-                  <img
-                    src={searchedOrder.cartItems[0]?.image || "https://images.unsplash.com/photo-1595777457583-95e059d581b8?q=80&w=300&auto=format&fit=crop"}
+                <div className="relative aspect-[3/4] w-20 md:w-24 overflow-hidden border border-brand-border bg-background-primary mx-auto md:mx-0">
+                  <Image
+                    src={searchedOrder.cartItems?.[0]?.image || "https://images.unsplash.com/photo-1595777457583-95e059d581b8?q=80&w=300&auto=format&fit=crop"}
                     alt="صورة المنتج المختار"
-                    className="w-full h-full object-cover"
+                    fill
+                    sizes="96px"
+                    className="object-cover"
                   />
                 </div>
 

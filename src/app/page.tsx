@@ -3,16 +3,13 @@
 import React from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowLeft, ArrowRight, ShieldCheck, MapPin, Gift, PhoneCall } from "lucide-react";
 import { ProductCard } from "@/components/ui/Card";
 import { mockProducts } from "@/data/products";
-import { useNotification } from "@/context/NotificationContext";
-import { motion } from "framer-motion";
 import Button from "@/components/ui/Button";
 import HeroSection from "@/components/HeroSection";
+import RecentlyViewed from "@/components/product/RecentlyViewed";
 
 export default function HomePage() {
-  const { showNotification } = useNotification();
   // Get first 4 products for Best Sellers
   const bestSellers = mockProducts.slice(0, 4);
 
@@ -36,50 +33,50 @@ export default function HomePage() {
 
         {/* 3 Campaign looks - Women's Clothing Only */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="relative aspect-[3/4] overflow-hidden border border-brand-border bg-background-secondary">
+          <Link href="/shop?category=dresses" className="relative aspect-[3/4] overflow-hidden border border-brand-border bg-background-secondary block group">
             <Image
               src="https://images.unsplash.com/photo-1539109136881-3be0616acf4b?q=80&w=800&auto=format&fit=crop"
               alt="إطلالة كلاسيكية راقية"
               fill
               sizes="(max-width: 768px) 100vw, 33vw"
-              className="object-cover transition-transform duration-[1200ms] hover:scale-105"
+              className="object-cover transition-transform duration-[1200ms] group-hover:scale-105"
             />
             <div className="absolute bottom-6 right-6 text-background-secondary z-10">
               <span className="font-sans text-[10px] uppercase font-semibold">الإطلالة الأولى</span>
-              <h3 className="font-sans text-lg font-light mt-1">فستان الكريب المنسدل</h3>
+              <h3 className="font-sans text-lg font-light mt-1">فساتين السهرة الكوتور</h3>
             </div>
             <div className="absolute inset-0 bg-gradient-to-t from-text-primary/60 via-transparent to-transparent pointer-events-none" />
-          </div>
+          </Link>
 
-          <div className="relative aspect-[3/4] overflow-hidden border border-brand-border bg-background-secondary">
+          <Link href="/summer-fashion" className="relative aspect-[3/4] overflow-hidden border border-brand-border bg-background-secondary block group">
             <Image
               src="https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=800&auto=format&fit=crop"
               alt="بدلة عصرية بيضاء"
               fill
               sizes="(max-width: 768px) 100vw, 33vw"
-              className="object-cover transition-transform duration-[1200ms] hover:scale-105"
+              className="object-cover transition-transform duration-[1200ms] group-hover:scale-105"
             />
             <div className="absolute bottom-6 right-6 text-background-secondary z-10">
-              <span className="font-sans text-[10px] uppercase font-semibold">الإطلالة الثانية</span>
-              <h3 className="font-sans text-lg font-light mt-1">طقم الكتان بلون الرمال</h3>
+              <span className="font-sans text-[10px] uppercase font-semibold">تشكيلة حصرية</span>
+              <h3 className="font-sans text-lg font-light mt-1">أزياء الصيف المنعشة</h3>
             </div>
             <div className="absolute inset-0 bg-gradient-to-t from-text-primary/60 via-transparent to-transparent pointer-events-none" />
-          </div>
+          </Link>
 
-          <div className="relative aspect-[3/4] overflow-hidden border border-brand-border bg-background-secondary">
+          <Link href="/winter-fashion" className="relative aspect-[3/4] overflow-hidden border border-brand-border bg-background-secondary block group">
             <Image
-              src="https://images.unsplash.com/photo-1595777457583-95e059d581b8?q=80&w=800&auto=format&fit=crop"
-              alt="بلوزة حريرية مطرزة"
+              src="https://images.unsplash.com/photo-1539533113208-f6df8cc8b543?q=80&w=800&auto=format&fit=crop"
+              alt="أزياء الشتاء"
               fill
               sizes="(max-width: 768px) 100vw, 33vw"
-              className="object-cover transition-transform duration-[1200ms] hover:scale-105"
+              className="object-cover transition-transform duration-[1200ms] group-hover:scale-105"
             />
             <div className="absolute bottom-6 right-6 text-background-secondary z-10">
-              <span className="font-sans text-[10px] uppercase font-semibold">الإطلالة الثالثة</span>
-              <h3 className="font-sans text-lg font-light mt-1">فستان السهرة الحريري</h3>
+              <span className="font-sans text-[10px] uppercase font-semibold">دفء وأناقة</span>
+              <h3 className="font-sans text-lg font-light mt-1">تشكيلة الشتاء الفاخرة</h3>
             </div>
             <div className="absolute inset-0 bg-gradient-to-t from-text-primary/60 via-transparent to-transparent pointer-events-none" />
-          </div>
+          </Link>
         </div>
       </section>
 
@@ -243,13 +240,13 @@ export default function HomePage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-[900px] w-full mt-2" dir="rtl">
               <div className="bg-background-secondary p-6 border border-brand-border flex flex-col gap-3 justify-center text-right">
                 <p className="font-sans text-xs text-text-secondary font-light italic leading-relaxed">
-                  "تصاميم دار أورا تعبر عن الأناقة الهادئة والفريدة. الكتان المعالج مريح للغاية والقصات الهندسية تمنح حضورًا راقيًا وثقة عالية في كل مناسبة."
+                  &quot;تصاميم دار أورا تعبر عن الأناقة الهادئة والفريدة. الكتان المعالج مريح للغاية والقصات الهندسية تمنح حضورًا راقيًا وثقة عالية في كل مناسبة.&quot;
                 </p>
                 <span className="font-sans text-[10px] text-accent font-bold">— ياسمين الشافعي، عميلة صالون أورا الخاص</span>
               </div>
               <div className="bg-background-secondary p-6 border border-brand-border flex flex-col gap-3 justify-center text-right">
                 <p className="font-sans text-xs text-text-secondary font-light italic leading-relaxed">
-                  "تفاصيل الخياطة اليدوية دقيقة للغاية في فستان الحرير الذي اقتنيته. إنه تجسيد للحرفية والموضة البطيئة الراقية بكل فخر في مصر."
+                  &quot;تفاصيل الخياطة اليدوية دقيقة للغاية في فستان الحرير الذي اقتنيته. إنه تجسيد للحرفية والموضة البطيئة الراقية بكل فخر في مصر.&quot;
                 </p>
                 <span className="font-sans text-[10px] text-accent font-bold">— نورة آل سعود، عضو صالون أورا البريدي</span>
               </div>
@@ -259,74 +256,9 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 7. NEWSLETTER - Chic Luxury Design */}
-      <section className="relative w-full py-24 md:py-32 overflow-hidden bg-[#2C2420]">
-        {/* Subtle background texture */}
-        <div className="absolute inset-0 w-full h-full opacity-[0.12] pointer-events-none">
-          <Image 
-            src="https://images.unsplash.com/photo-1490481651871-ab68de25d43d?q=80&w=2000&auto=format&fit=crop"
-            alt="AURA Newsletter Texture"
-            fill
-            sizes="100vw"
-            className="object-cover object-center grayscale mix-blend-overlay"
-          />
-        </div>
-        <div className="absolute inset-0 bg-gradient-to-b from-[#2C2420]/90 via-[#2C2420]/70 to-[#2C2420]/95 pointer-events-none" />
-
-        <div className="relative z-10 max-w-[800px] mx-auto px-6 text-center flex flex-col items-center">
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "100px" }}
-            variants={{
-              hidden: { opacity: 0 },
-              visible: { opacity: 1, transition: { staggerChildren: 0.15 } }
-            }}
-            className="flex flex-col items-center gap-6 w-full"
-          >
-            <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: [0.25, 0.1, 0.25, 1] } } }} className="flex items-center gap-4 text-[#D4AF37]">
-              <span className="w-8 h-[1px] bg-[#D4AF37]/40"></span>
-              <span className="font-sans text-[10px] md:text-xs font-bold uppercase tracking-[0.2em]">
-                صالون أورا البريدي الخاص
-              </span>
-              <span className="w-8 h-[1px] bg-[#D4AF37]/40"></span>
-            </motion.div>
-            
-            <motion.h2 variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: [0.25, 0.1, 0.25, 1] } } }} className="font-serif text-3xl sm:text-4xl md:text-5xl lg:text-[3.5rem] text-white font-light leading-[1.2] text-balance">
-              عالم من الخيارات الحصرية بانتظاركِ
-            </motion.h2>
-            
-            <motion.p variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: [0.25, 0.1, 0.25, 1] } } }} className="font-sans text-xs md:text-sm font-light text-white/70 leading-relaxed max-w-lg mt-1 mb-4 text-balance">
-              سجلي بريدكِ الإلكتروني لتلقي دعوات خاصة ونظرات مسبقة حصرية قبل الإطلاق العام للقطع الفردية النادرة بدار أورا.
-            </motion.p>
-            
-            <motion.form
-              variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: [0.25, 0.1, 0.25, 1] } } }}
-              className="w-full max-w-lg flex flex-col sm:flex-row mt-4 group shadow-2xl shadow-black/20"
-              onSubmit={(e) => {
-                e.preventDefault();
-                showNotification("شكرًا لانضمامكِ إلى صالون AURA البريدي الخاص", "success");
-              }}
-            >
-              <input
-                type="email"
-                placeholder="أدخلي بريدكِ الإلكتروني..."
-                required
-                className="w-full h-14 bg-white/5 border border-white/20 text-sm font-sans font-light text-white outline-none px-6 placeholder:text-white/40 text-right focus:border-[#D4AF37]/60 focus:bg-white/10 transition-all duration-300 sm:border-l-0 backdrop-blur-sm"
-                dir="rtl"
-              />
-              <button
-                type="submit"
-                className="h-14 bg-[#D4AF37] text-[#1a1a1a] hover:bg-white hover:text-[#1a1a1a] text-xs md:text-sm font-sans font-bold px-8 transition-colors duration-500 w-full sm:w-auto shrink-0 mt-3 sm:mt-0"
-              >
-                انضمام للصالون
-              </button>
-            </motion.form>
-          </motion.div>
-        </div>
-      </section>
+      {/* 8. RECENTLY VIEWED */}
+      <RecentlyViewed />
 
     </div>
   );
 }
-
