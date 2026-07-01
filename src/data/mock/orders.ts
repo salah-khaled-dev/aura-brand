@@ -71,6 +71,11 @@ export interface Order {
   billingAddress?: string;
   timeline: OrderTimelineEvent[];
 
+  couponId?: string | null;
+  couponCode?: string | null;
+  discountValue?: number;
+  discountType?: 'percentage' | 'fixed' | 'shipping';
+
   date: string;
   createdAt: string;
   updatedAt: string;

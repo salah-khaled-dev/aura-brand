@@ -1,11 +1,14 @@
-import { Metadata } from "next";
+import type { Metadata } from 'next';
+import { generatePageMetadata } from '@/utils/seo-helper';
 
-export const metadata: Metadata = {
-  title: "تتبع الطلب | AURA",
-  description: "تتبعي حالة شحن طلبكِ من دار أورا خطوة بخطوة.",
-  robots: { index: false, follow: false },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return generatePageMetadata(
+    'tracking',
+    'تتبع طلبكِ | أورا',
+    'تتبعي حالة شحنتك من دار أورا بإدخال رقم الطلب.'
+  );
+}
 
 export default function TrackingLayout({ children }: { children: React.ReactNode }) {
-  return children;
+  return <>{children}</>;
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { RatingStars, ReviewCard, fadeUp } from "@/components/ui/PageComponents";
@@ -9,6 +9,13 @@ import { useNotification } from "@/context/NotificationContext";
 import { scrollFadeUp, scrollFadeIn, scrollScaleIn, revealTransition, scrollViewport } from "@/lib/animations";
 import { ReviewService } from "@/lib/services/review.service";
 import { useEventSubscribeMany } from "@/hooks/useEventBus";
+import { ContentService } from "@/lib/services/storefront/content.service";
+
+const DEFAULT_HERO = {
+  reviews_hero_label:    'صوت عميلاتنا',
+  reviews_hero_title:    'آراء عملائنا',
+  reviews_hero_subtitle: 'تجارب حقيقية من عميلات دار أورا — كلمات صادقة تعكس شغفنا بالحرفية والتميز.',
+};
 
 const ARABIC_MONTHS = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
 const toArabicDigits = (n: number) => n.toString().replace(/\d/g, (d) => "٠١٢٣٤٥٦٧٨٩"[+d]);
@@ -50,12 +57,24 @@ type DisplayReview = {
 
 export default function ReviewsPage() {
   const { showNotification } = useNotification();
+  const [hero, setHero] = useState(DEFAULT_HERO);
   const [name, setName] = useState("");
   const [productName, setProductName] = useState("");
   const [review, setReview] = useState("");
   const [rating, setRating] = useState(5);
   const [reviews, setReviews] = useState<DisplayReview[]>([]);
   const [submitting, setSubmitting] = useState(false);
+
+  const loadHero = useCallback(async () => {
+    try {
+      const blocks = await ContentService.getContentByGroup('pages');
+      const map: Record<string, string> = {};
+      blocks.forEach(b => { map[b.key] = b.value; });
+      setHero(prev => ({ ...prev, ...map }));
+    } catch {
+      // keep defaults
+    }
+  }, []);
 
   const loadReviews = async () => {
     try {
@@ -83,8 +102,9 @@ export default function ReviewsPage() {
     }
   };
 
-  useEffect(() => { loadReviews(); }, []);
+  useEffect(() => { loadReviews(); loadHero(); }, [loadHero]);
   useEventSubscribeMany(['reviews.changed', 'review.approved'], loadReviews);
+  useEventSubscribeMany(['website.changed'], loadHero);
 
   const totalReviews = reviews.length;
   const avgRating = totalReviews > 0 ? +(reviews.reduce((s, r) => s + r.rating, 0) / totalReviews).toFixed(1) : 5.0;
@@ -142,19 +162,19 @@ export default function ReviewsPage() {
               custom={0} variants={fadeUp}
               className="font-sans text-[10px] uppercase tracking-[0.3em] text-accent font-bold"
             >
-              صوت عميلاتنا
+              {hero.reviews_hero_label}
             </motion.span>
             <motion.h1
               custom={0.1} variants={fadeUp}
               className="font-serif text-4xl sm:text-5xl md:text-6xl font-light text-text-primary leading-[1.15]"
             >
-              آراء عملائنا
+              {hero.reviews_hero_title}
             </motion.h1>
             <motion.p
               custom={0.2} variants={fadeUp}
               className="font-sans text-sm font-light text-text-secondary leading-relaxed max-w-md"
             >
-              تجارب حقيقية من عميلات دار أورا — كلمات صادقة تعكس شغفنا بالحرفية والتميز.
+              {hero.reviews_hero_subtitle}
             </motion.p>
           </motion.div>
         </div>

@@ -3,11 +3,15 @@ import Link from "next/link";
 import Button from "@/components/ui/Button";
 import { getWhatsAppUrl } from "@/config/whatsapp";
 import { ContactItems } from "./ContactItems";
+import { generatePageMetadata } from "@/utils/seo-helper";
 
-export const metadata: Metadata = {
-  title: "تواصلي معنا | AURA",
-  description: "تواصلي مع مستشارات دار AURA للاستفسار عن المنتجات، المقاسات، الطلبات الخاصة، وخدمات الأتيلييه.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return generatePageMetadata(
+    'contact',
+    'تواصل معنا | دار أورا',
+    'تواصلي مع فريق دار أورا لأي استفسار عن المنتجات أو المقاسات أو الطلبات الخاصة.'
+  );
+}
 
 export default function ContactPage() {
   return (

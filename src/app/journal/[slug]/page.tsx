@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { mockArticles } from "@/data/journal";
+import DOMPurify from "isomorphic-dompurify";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -107,7 +108,12 @@ export default async function ArticlePage({ params }: PageProps) {
       {/* Content Body */}
       <main className="w-full max-w-[760px] mx-auto px-6 py-16 md:py-24 text-right" dir="rtl">
         <div className="font-sans text-sm md:text-base font-light text-text-primary leading-[2.2] space-y-8"
-          dangerouslySetInnerHTML={{ __html: article.content }}
+          dangerouslySetInnerHTML={{ 
+            __html: DOMPurify.sanitize(article.content, {
+              ALLOWED_TAGS: ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'ul', 'ol', 'li', 'blockquote', 'a', 'img', 'strong', 'em', 'span', 'div', 'br'],
+              ALLOWED_ATTR: ['href', 'src', 'alt', 'title', 'class', 'id', 'target', 'rel']
+            })
+          }}
         />
 
         {/* Editorial Divider & CTA */}

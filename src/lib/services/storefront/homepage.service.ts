@@ -2,8 +2,34 @@ import { eventBus } from '@/lib/events/EventBus';
 import { mockStorage } from '@/lib/storage/mock-storage';
 
 export type HomepageSectionType =
-  | 'hero' | 'featured_collections' | 'featured_products' | 'best_sellers'
-  | 'new_arrivals' | 'testimonials' | 'instagram' | 'newsletter' | 'custom_html';
+  | 'hero'
+  | 'featured_collections'
+  | 'featured_products'
+  | 'best_sellers'
+  | 'new_arrivals'
+  | 'seasonal_collection'
+  | 'editorial_banner'
+  | 'testimonials'
+  | 'instagram'
+  | 'newsletter'
+  | 'custom_html';
+
+/** How product sections resolve their pool of products */
+export type ProductSectionSource =
+  | 'auto_best_sellers'
+  | 'auto_new_arrivals'
+  | 'auto_featured'
+  | 'auto_summer'
+  | 'auto_winter'
+  | 'auto_all'
+  | 'manual';
+
+export type ProductSectionSort =
+  | 'default'
+  | 'price_asc'
+  | 'price_desc'
+  | 'newest'
+  | 'random';
 
 export interface HomepageSection {
   id: string;
@@ -12,7 +38,7 @@ export interface HomepageSection {
   subtitle?: string;
   enabled: boolean;
   order: number;
-  settings: any;
+  settings: Record<string, any>;
 }
 
 export interface HeroSlide {
@@ -24,8 +50,8 @@ export interface HeroSlide {
   subtitle: string;
 }
 
-/** Sensible default settings for each section type, used when adding a new section. */
-export const DEFAULT_SECTION_SETTINGS: Record<HomepageSectionType, any> = {
+/** Default settings per section type — used when adding a new section or restoring defaults */
+export const DEFAULT_SECTION_SETTINGS: Record<HomepageSectionType, Record<string, any>> = {
   hero: {
     slides: [] as HeroSlide[],
     ctaText: 'اكتشفي التشكيلة',
@@ -33,13 +59,87 @@ export const DEFAULT_SECTION_SETTINGS: Record<HomepageSectionType, any> = {
     secondaryCtaText: 'قصتنا الفنية',
     secondaryCtaLink: '/about',
   },
-  featured_collections: { limit: 3, layout: 'grid' },
-  featured_products: { limit: 4, layout: 'grid' },
-  best_sellers: { limit: 4, layout: 'grid' },
-  new_arrivals: { limit: 4, layout: 'grid' },
+  featured_collections: {
+    limit: 3,
+    layout: 'grid',
+    columns: 3,
+    source: 'auto_all' as ProductSectionSource,
+    sort: 'default' as ProductSectionSort,
+    hideOutOfStock: false,
+    showDiscountBadge: true,
+    showWishlistButton: true,
+    manualProductIds: [] as string[],
+  },
+  featured_products: {
+    limit: 4,
+    layout: 'grid',
+    columns: 4,
+    source: 'auto_featured' as ProductSectionSource,
+    sort: 'default' as ProductSectionSort,
+    hideOutOfStock: false,
+    showDiscountBadge: true,
+    showWishlistButton: true,
+    manualProductIds: [] as string[],
+  },
+  best_sellers: {
+    limit: 4,
+    layout: 'grid',
+    columns: 4,
+    source: 'auto_best_sellers' as ProductSectionSource,
+    sort: 'default' as ProductSectionSort,
+    hideOutOfStock: false,
+    showDiscountBadge: true,
+    showWishlistButton: true,
+    manualProductIds: [] as string[],
+  },
+  new_arrivals: {
+    limit: 4,
+    layout: 'grid',
+    columns: 4,
+    source: 'auto_new_arrivals' as ProductSectionSource,
+    sort: 'default' as ProductSectionSort,
+    hideOutOfStock: false,
+    showDiscountBadge: true,
+    showWishlistButton: true,
+    manualProductIds: [] as string[],
+  },
+  seasonal_collection: {
+    season: 'summer',
+    limit: 4,
+    layout: 'grid',
+    columns: 4,
+    source: 'auto_summer' as ProductSectionSource,
+    sort: 'default' as ProductSectionSort,
+    hideOutOfStock: false,
+    showDiscountBadge: true,
+    showWishlistButton: true,
+    manualProductIds: [] as string[],
+  },
+  editorial_banner: {
+    image: '/images/campaign/campaign_4.png',
+    title: '',
+    subtitle: '',
+    ctaText: 'استكشفي التشكيلة',
+    ctaLink: '/shop',
+    textAlign: 'center',
+    overlayOpacity: 40,
+  },
   testimonials: { limit: 3 },
-  instagram: { handle: '@aurabrand.eg', limit: 6 },
-  newsletter: { title: 'انضمي لصالون أورا البريدي', subtitle: 'دعوات خاصة وتحديثات الأتيلييه' },
+  instagram: {
+    handle: '@aurabrand.eg',
+    limit: 6,
+    gridSize: 3,
+    title: 'أورا على إنستغرام',
+    subtitle: 'تابعينا',
+  },
+  newsletter: {
+    title: 'انضمي لصالون أورا البريدي',
+    subtitle: 'دعوات خاصة وتحديثات الأتيلييه',
+    placeholder: 'بريدكِ الإلكتروني',
+    buttonText: 'انضمي الآن',
+    successMessage: 'شكراً لانضمامكِ! سنتواصل معكِ قريباً.',
+    description: 'دعوات حصرية، تحديثات الأتيلييه، وعروض العملاء المميزين — أولاً لأعضاء الصالون البريدي.',
+  },
   custom_html: { html: '<div></div>' },
 };
 
@@ -49,13 +149,14 @@ export const SECTION_TYPE_LABELS_AR: Record<HomepageSectionType, string> = {
   featured_products: 'منتجات مميزة',
   best_sellers: 'الأكثر مبيعاً',
   new_arrivals: 'وصل حديثاً',
+  seasonal_collection: 'تشكيلة موسمية',
+  editorial_banner: 'بانر تحريري',
   testimonials: 'آراء العملاء',
   instagram: 'إنستغرام',
   newsletter: 'النشرة البريدية',
   custom_html: 'HTML مخصص',
 };
 
-// Real AURA homepage sections — mirroring the actual storefront sections rendered in src/app/page.tsx
 let mockSections: HomepageSection[] = [
   {
     id: 'sec-hero-1',
@@ -66,36 +167,15 @@ let mockSections: HomepageSection[] = [
     order: 0,
     settings: {
       slides: [
-        {
-          id: 1,
-          image: '/images/campaign/campaign_4.png',
-          label: 'AURA HAUTE COUTURE',
-          title: 'أناقة الأثر والمعنى',
-          engTitle: 'THE SIGNATURE COUTURE',
-          subtitle: 'تصاميم كوتور راقية تُصاغ يدوياً للمرأة المعاصرة التي تقدر تميز التفاصيل وعراقة الصنع الفاخر.'
-        },
-        {
-          id: 2,
-          image: '/images/campaign/campaign_5.png',
-          label: 'EDITORIAL CAMPAIGN',
-          title: 'تفاصيل تروي حضوركِ',
-          engTitle: 'LUNA & SILK ESSENCE',
-          subtitle: 'أزياء نسائية صممت بهيبة الحضور وقوة الشخصية منسوجة من الكتان الطبيعي البلجيكي والحرير الطبيعي.'
-        },
-        {
-          id: 3,
-          image: '/images/campaign/campaign_6.png',
-          label: 'THE EDITORIAL SERIES',
-          title: 'الفخامة الهادئة والخلود',
-          engTitle: 'QUIET LUXURY 2026',
-          subtitle: 'خطوط كلاسيكية مبسطة وخامات كشمير إيطالية تنساب بنعومة بالغة لتتجاوز بريق صيحات الموضة المؤقتة.'
-        }
+        { id: 1, image: '/images/campaign/campaign_4.png', label: 'AURA HAUTE COUTURE', title: 'أناقة الأثر والمعنى', engTitle: 'THE SIGNATURE COUTURE', subtitle: 'تصاميم كوتور راقية تُصاغ يدوياً للمرأة المعاصرة التي تقدر تميز التفاصيل وعراقة الصنع الفاخر.' },
+        { id: 2, image: '/images/campaign/campaign_5.png', label: 'EDITORIAL CAMPAIGN', title: 'تفاصيل تروي حضوركِ', engTitle: 'LUNA & SILK ESSENCE', subtitle: 'أزياء نسائية صممت بهيبة الحضور وقوة الشخصية منسوجة من الكتان الطبيعي البلجيكي والحرير الطبيعي.' },
+        { id: 3, image: '/images/campaign/campaign_6.png', label: 'THE EDITORIAL SERIES', title: 'الفخامة الهادئة والخلود', engTitle: 'QUIET LUXURY 2026', subtitle: 'خطوط كلاسيكية مبسطة وخامات كشمير إيطالية تنساب بنعومة بالغة لتتجاوز بريق صيحات الموضة المؤقتة.' },
       ] as HeroSlide[],
       ctaText: 'اكتشفي التشكيلة',
       ctaLink: '/shop',
       secondaryCtaText: 'قصتنا الفنية',
       secondaryCtaLink: '/about',
-    }
+    },
   },
   {
     id: 'sec-best-1',
@@ -104,7 +184,7 @@ let mockSections: HomepageSection[] = [
     subtitle: 'المجموعة الحصرية',
     enabled: true,
     order: 1,
-    settings: { limit: 4, layout: 'grid' }
+    settings: { ...DEFAULT_SECTION_SETTINGS.best_sellers },
   },
   {
     id: 'sec-newarrivals-1',
@@ -113,7 +193,7 @@ let mockSections: HomepageSection[] = [
     subtitle: 'نظرة مسبقة',
     enabled: true,
     order: 2,
-    settings: { limit: 4, layout: 'grid' }
+    settings: { ...DEFAULT_SECTION_SETTINGS.new_arrivals },
   },
   {
     id: 'sec-newsletter-1',
@@ -122,8 +202,8 @@ let mockSections: HomepageSection[] = [
     subtitle: 'دعوات خاصة وتحديثات الأتيلييه',
     enabled: false,
     order: 3,
-    settings: { title: 'انضمي لصالون أورا البريدي', subtitle: 'دعوات خاصة وتحديثات الأتيلييه' }
-  }
+    settings: { ...DEFAULT_SECTION_SETTINGS.newsletter },
+  },
 ];
 
 mockSections = mockStorage.read('storefront.homepage', mockSections);
@@ -179,7 +259,7 @@ export const HomepageService = {
     if (idx > -1) {
       mockSections[idx] = { ...mockSections[idx], ...updates };
       mockStorage.write('storefront.homepage', mockSections);
-    eventBus.emit('website.changed', { area: 'homepage' });
+      eventBus.emit('website.changed', { area: 'homepage' });
       return mockSections[idx];
     }
     throw new Error('Section not found');
@@ -189,5 +269,9 @@ export const HomepageService = {
     mockSections = mockSections.filter(s => s.id !== id);
     mockStorage.write('storefront.homepage', mockSections);
     eventBus.emit('website.changed', { area: 'homepage' });
-  }
+  },
+
+  getDefaultSettings(type: HomepageSectionType): Record<string, any> {
+    return { ...DEFAULT_SECTION_SETTINGS[type] };
+  },
 };

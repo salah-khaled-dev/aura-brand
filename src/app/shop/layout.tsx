@@ -1,45 +1,14 @@
-import { Metadata } from "next";
+import type { Metadata } from 'next';
+import { generatePageMetadata } from '@/utils/seo-helper';
 
-export const metadata: Metadata = {
-  title: "التشكيلة | AURA",
-  description: "استكشفي أحدث تشكيلات أورا من الأزياء النسائية الفاخرة، المصممة بعناية فائقة لتبرز جمالكِ وأنوثتكِ في كل مناسبة.",
-  openGraph: {
-    title: "التشكيلة الكاملة | AURA",
-    description: "استكشفي أحدث تشكيلات أورا من الأزياء النسائية الفاخرة.",
-    url: "https://aura-fashion-virid.vercel.app/shop",
-  },
-  alternates: {
-    canonical: "https://aura-fashion-virid.vercel.app/shop",
-  },
-};
-
-const breadcrumbSchema = {
-  "@context": "https://schema.org",
-  "@type": "BreadcrumbList",
-  "itemListElement": [
-    {
-      "@type": "ListItem",
-      "position": 1,
-      "name": "الرئيسية",
-      "item": "https://aura-fashion-virid.vercel.app/"
-    },
-    {
-      "@type": "ListItem",
-      "position": 2,
-      "name": "المتجر",
-      "item": "https://aura-fashion-virid.vercel.app/shop"
-    }
-  ]
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return generatePageMetadata(
+    'shop',
+    'متجر أورا | أزياء نسائية فاخرة',
+    'تسوقي أحدث تصاميم دار أورا من فساتين ومجموعات راقية مصنوعة من أجود الأقمشة الطبيعية.'
+  );
+}
 
 export default function ShopLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
-      />
-      {children}
-    </>
-  );
+  return <>{children}</>;
 }

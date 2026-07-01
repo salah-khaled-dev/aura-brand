@@ -137,6 +137,8 @@ export default function Footer() {
   const [newsletterSubtitle, setNewsletterSubtitle] = useState('دعوات خاصة وتحديثات الأتيلييه');
   const [copyrightText, setCopyrightText] = useState('© ٢٠٢٦ دار أورا للأزياء الراقية');
   const [developerCredit, setDeveloperCredit] = useState('صلاح خالد');
+  const [showNewsletter, setShowNewsletter] = useState(true);
+  const [showSocialIcons, setShowSocialIcons] = useState(true);
 
   const SOCIAL_ICON_MAP: Record<string, React.FC> = {
     facebook: SocialIcons.Facebook,
@@ -166,6 +168,8 @@ export default function Footer() {
       if (footerSettings.newsletterSubtitle) setNewsletterSubtitle(footerSettings.newsletterSubtitle);
       if (footerSettings.copyrightText) setCopyrightText(footerSettings.copyrightText);
       if (footerSettings.developerCredit) setDeveloperCredit(footerSettings.developerCredit);
+      setShowNewsletter(footerSettings.showNewsletter ?? true);
+      setShowSocialIcons(footerSettings.showSocialIcons ?? true);
 
       if (storeInfo?.socialMedia) {
         const sm = storeInfo.socialMedia;
@@ -221,43 +225,45 @@ export default function Footer() {
           </motion.div>
 
           {/* Newsletter */}
-          <motion.div
-            initial={{ opacity: 0, y: 28 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "60px" }}
-            transition={{ duration: 1, delay: 0.15, ease: [0.25, 0.1, 0.25, 1] }}
-            className="flex flex-col gap-3 w-full md:max-w-[380px]"
-          >
-            <span className="font-sans text-[10px] uppercase tracking-[0.22em] text-accent font-bold">
-              {newsletterTitle}
-            </span>
-            <h3 className="font-serif text-lg md:text-xl font-light text-text-primary leading-snug">
-              {newsletterSubtitle}
-            </h3>
-            <form
-              onSubmit={handleSubscribe}
-              className="flex mt-1"
+          {showNewsletter && (
+            <motion.div
+              initial={{ opacity: 0, y: 28 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "60px" }}
+              transition={{ duration: 1, delay: 0.15, ease: [0.25, 0.1, 0.25, 1] }}
+              className="flex flex-col gap-3 w-full md:max-w-[380px]"
             >
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="بريدكِ الإلكتروني..."
-                required
-                dir="rtl"
-                className="flex-1 h-12 bg-white border border-[#EAE3D9] border-l-0 text-xs font-sans
-                           text-text-primary px-5 outline-none placeholder:text-text-secondary/40
-                           focus:border-accent transition-colors duration-300"
-              />
-              <button
-                type="submit"
-                className="h-12 shrink-0 bg-text-primary text-background-secondary text-xs font-sans
-                           font-semibold px-7 hover:bg-accent transition-colors duration-500"
+              <span className="font-sans text-[10px] uppercase tracking-[0.22em] text-accent font-bold">
+                {newsletterTitle}
+              </span>
+              <h3 className="font-serif text-lg md:text-xl font-light text-text-primary leading-snug">
+                {newsletterSubtitle}
+              </h3>
+              <form
+                onSubmit={handleSubscribe}
+                className="flex mt-1"
               >
-                انضمام
-              </button>
-            </form>
-          </motion.div>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="بريدكِ الإلكتروني..."
+                  required
+                  dir="rtl"
+                  className="flex-1 h-12 bg-white border border-[#EAE3D9] border-l-0 text-xs font-sans
+                             text-text-primary px-5 outline-none placeholder:text-text-secondary/40
+                             focus:border-accent transition-colors duration-300"
+                />
+                <button
+                  type="submit"
+                  className="h-12 shrink-0 bg-text-primary text-background-secondary text-xs font-sans
+                             font-semibold px-7 hover:bg-accent transition-colors duration-500"
+                >
+                  انضمام
+                </button>
+              </form>
+            </motion.div>
+          )}
         </div>
 
         {/* Thin separator */}
@@ -318,13 +324,15 @@ export default function Footer() {
           </div>
 
           {/* Social icons */}
-          <div className="flex items-center gap-0">
-            {socials.map(({ Icon, label, href }) => (
-              <SocialIconButton key={label} href={href} label={label} size="md">
-                <Icon />
-              </SocialIconButton>
-            ))}
-          </div>
+          {showSocialIcons && (
+            <div className="flex items-center gap-0">
+              {socials.map(({ Icon, label, href }) => (
+                <SocialIconButton key={label} href={href} label={label} size="md">
+                  <Icon />
+                </SocialIconButton>
+              ))}
+            </div>
+          )}
         </motion.div>
       </div>
 

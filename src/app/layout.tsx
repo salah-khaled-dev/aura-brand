@@ -33,40 +33,24 @@ const playfairDisplay = Playfair_Display({
   display: "swap",
 });
 
-export const metadata: Metadata = {
-  metadataBase: new URL("https://aura-brand-virid.vercel.app"),
-  title: "AURA | دار الأزياء المصرية الراقية",
-  description: "أورا - دار أزياء نسائية مصرية فاخرة تقدم مفهومًا متطورًا للأناقة والأنوثة العصرية بأيدي حرفية متقنة وتفاصيل فريدة.",
-  keywords: ["AURA", "أورا", "أزياء نسائية", "كوتور", "ملابس فاخرة", "أزياء مصرية"],
-  authors: [{ name: "AURA Fashion House" }],
-  openGraph: {
-    title: "AURA | دار الأزياء المصرية الراقية",
-    description: "تجسيد الفخامة والأناقة الهادئة بتصاميم عصرية.",
-    url: "/",
-    siteName: "AURA",
-    images: [
-      {
-        url: "/aura_thumbnail.png",
-        width: 1200,
-        height: 630,
-        alt: "AURA Luxury Campaign",
-      },
-    ],
-    locale: "ar_EG",
-    type: "website",
-    countryName: "Egypt",
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "AURA | دار الأزياء المصرية الراقية",
-    description: "تجسيد الفخامة والأناقة الهادئة بتصاميم عصرية.",
-    images: ["/aura_thumbnail.png"],
-  },
-  icons: {
-    icon: "/logo.svg",
-    apple: "/logo.svg",
-  },
-};
+import { generatePageMetadata } from "@/utils/seo-helper";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const meta = await generatePageMetadata(
+    'homepage',
+    'AURA | دار الأزياء المصرية الراقية',
+    'أورا - دار أزياء نسائية مصرية فاخرة تقدم مفهومًا متطورًا للأناقة والأنوثة العصرية بأيدي حرفية متقنة وتفاصيل فريدة.'
+  );
+  return {
+    ...meta,
+    metadataBase: new URL("https://aura-fashion-virid.vercel.app"),
+    authors: [{ name: "AURA Fashion House" }],
+    icons: {
+      icon: "/logo.svg",
+      apple: "/logo.svg",
+    },
+  };
+}
 
 export default function RootLayout({
   children,

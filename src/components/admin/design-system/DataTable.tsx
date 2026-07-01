@@ -56,12 +56,17 @@ export interface DataTableProps<T extends { id?: string | number }> {
   onDelete?: (item: T) => void;
 }
 
-function SkeletonRow({ cols }: { cols: number }) {
+const SKELETON_WIDTHS = ["65%", "80%", "72%", "90%", "68%", "76%"];
+
+function SkeletonRow({ cols, rowIndex }: { cols: number; rowIndex: number }) {
   return (
     <tr className="border-b border-[var(--admin-border-light)]">
       {Array.from({ length: cols }).map((_, i) => (
         <td key={i} className="px-5 py-4">
-          <div className="h-5 rounded-[var(--admin-radius-sm)] bg-[var(--admin-bg-elevated)] animate-pulse" style={{ width: `${60 + Math.random() * 30}%` }} />
+          <div 
+            className="h-5 rounded-[var(--admin-radius-sm)] bg-[var(--admin-bg-elevated)] animate-pulse" 
+            style={{ width: SKELETON_WIDTHS[(rowIndex + i) % SKELETON_WIDTHS.length] }} 
+          />
         </td>
       ))}
     </tr>
@@ -282,7 +287,7 @@ export function DataTable<T extends { id?: string | number }>({
           </thead>
           <tbody className="divide-y divide-[var(--admin-border-light)] relative z-0">
             {isLoading ? (
-              Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} cols={visibleColumns.length + (selectable ? 1 : 0) + (hasActions ? 1 : 0)} />)
+              Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} rowIndex={i} cols={visibleColumns.length + (selectable ? 1 : 0) + (hasActions ? 1 : 0)} />)
             ) : (!data || data.length === 0) ? (
               <tr>
                 <td colSpan={visibleColumns.length + (selectable ? 1 : 0) + (hasActions ? 1 : 0)} className="py-24">

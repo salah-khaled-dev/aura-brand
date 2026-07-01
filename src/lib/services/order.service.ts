@@ -28,6 +28,9 @@ export interface CreateOrderInput {
   taxRate?: number;       // e.g. 0.15
   discount?: number;
   couponCode?: string | null;
+  couponId?: string | null;
+  discountValue?: number;
+  discountType?: 'percentage' | 'fixed' | 'shipping';
   paymentMethod?: string;
   notes?: string;
   /** Where the order originated, used to tailor the customer-facing note. */
@@ -167,6 +170,10 @@ class MockOrderRepositoryImpl implements IOrderRepository {
       customerEmail: input.customerEmail,
       customerPhone: input.customerPhone,
       customerNotes: input.couponCode ? `كوبون مستخدم: ${input.couponCode}` : undefined,
+      couponId: input.couponId ?? null,
+      couponCode: input.couponCode ?? null,
+      discountValue: input.discountValue ?? 0,
+      discountType: input.discountType,
       items,
       subtotal,
       discount,

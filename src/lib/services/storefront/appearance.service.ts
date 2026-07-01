@@ -1,3 +1,4 @@
+import { eventBus } from '@/lib/events/EventBus';
 import { mockStorage } from '@/lib/storage/mock-storage';
 
 export interface StoreAppearance {
@@ -10,6 +11,10 @@ export interface StoreAppearance {
   buttonStyle: 'solid' | 'outline' | 'ghost';
   cardRadius: 'none' | 'sm' | 'md' | 'lg' | 'xl';
   animationSpeed: 'slow' | 'normal' | 'fast';
+  /** Runtime color overrides — map to Tailwind CSS custom properties */
+  accentColor: string;
+  textPrimaryColor: string;
+  backgroundPrimaryColor: string;
   effects: {
     hoverScale: boolean;
     pageTransitions: boolean;
@@ -26,6 +31,9 @@ let mockAppearance: StoreAppearance = {
   buttonStyle: 'solid',
   cardRadius: 'lg',
   animationSpeed: 'normal',
+  accentColor: '#C5A880',
+  textPrimaryColor: '#1C1C1B',
+  backgroundPrimaryColor: '#FAF8F5',
   effects: {
     hoverScale: true,
     pageTransitions: true,
@@ -42,6 +50,7 @@ export const AppearanceService = {
   async updateSettings(updates: Partial<StoreAppearance>): Promise<StoreAppearance> {
     mockAppearance = { ...mockAppearance, ...updates };
     mockStorage.write('storefront.appearance', mockAppearance);
+    eventBus.emit('website.changed', { area: 'appearance' });
     return { ...mockAppearance };
   }
 };

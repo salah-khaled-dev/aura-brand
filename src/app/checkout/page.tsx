@@ -14,6 +14,8 @@ import { IconCircleCheck as CheckCircle, IconTruck as Truck, IconShieldExclamati
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { fadeIn, slideInRight, scaleIn } from "@/lib/animations";
+import { eventBus } from "@/lib/events/EventBus";
+import { refreshFromStorage as refreshCouponsFromStorage } from "@/data/mock/coupons";
 
 export default function CheckoutPage() {
   const { showNotification } = useNotification();
@@ -43,12 +45,27 @@ export default function CheckoutPage() {
 
   // Coupon state (validated through the shared CouponService — same source as admin)
   const [couponInput, setCouponInput] = useState("");
-  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discount: number } | null>(null);
+  const [appliedCoupon, setAppliedCoupon] = useState<{ id: string; code: string; discount: number; type: string; discountValue: number } | null>(null);
   const [couponError, setCouponError] = useState("");
   const [couponLoading, setCouponLoading] = useState(false);
 
   const discount = appliedCoupon?.discount ?? 0;
   const cartTotal = Math.max(0, cartSubtotal - discount);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'aura_mock_db:coupons') {
+        if (refreshCouponsFromStorage()) {
+          eventBus.emit('coupon.changed');
+        }
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []);
 
   // Re-validate the applied coupon whenever the cart subtotal changes (e.g. min-order no longer met).
   useEffect(() => {
@@ -60,11 +77,53 @@ export default function CheckoutPage() {
         setAppliedCoupon(null);
         setCouponError(res.error || "لم يعد الكوبون صالحاً");
       } else if (res.discountAmount !== appliedCoupon.discount) {
-        setAppliedCoupon({ code: appliedCoupon.code, discount: res.discountAmount });
+        setAppliedCoupon({
+          id: appliedCoupon.id,
+          code: appliedCoupon.code,
+          discount: res.discountAmount,
+          type: appliedCoupon.type,
+          discountValue: appliedCoupon.discountValue
+        });
       }
     });
     return () => { active = false; };
   }, [cartSubtotal]);
+
+  // Reactive subscription to Coupon changes / deletions
+  useEffect(() => {
+    if (!appliedCoupon) return;
+    const handleCouponChange = async () => {
+      const res = await CouponService.calculateDiscount(appliedCoupon.code, cartSubtotal);
+      if (!res.valid) {
+        setAppliedCoupon(null);
+        setCouponError(res.error || "تم إيقاف الكوبون من الإدارة");
+      } else {
+        setAppliedCoupon({
+          id: res.coupon!.id,
+          code: res.coupon!.code,
+          discount: res.discountAmount,
+          type: res.coupon!.type,
+          discountValue: res.coupon!.discountValue
+        });
+      }
+    };
+
+    const handleCouponDelete = (payload: any) => {
+      const deletedId = typeof payload === 'object' ? payload.id : payload;
+      if (deletedId === appliedCoupon.id) {
+        setAppliedCoupon(null);
+        setCouponError("تم حذف هذا الكوبون من الإدارة");
+      }
+    };
+
+    eventBus.subscribe('coupon.changed', handleCouponChange);
+    eventBus.subscribe('coupon.deleted', handleCouponDelete);
+
+    return () => {
+      eventBus.unsubscribe('coupon.changed', handleCouponChange);
+      eventBus.unsubscribe('coupon.deleted', handleCouponDelete);
+    };
+  }, [appliedCoupon, cartSubtotal]);
 
   const handleApplyCoupon = async () => {
     const code = couponInput.trim();
@@ -77,7 +136,13 @@ export default function CheckoutPage() {
         setAppliedCoupon(null);
         setCouponError(res.error || "الكوبون غير صالح");
       } else {
-        setAppliedCoupon({ code: code.toUpperCase(), discount: res.discountAmount });
+        setAppliedCoupon({
+          id: res.coupon!.id,
+          code: res.coupon!.code,
+          discount: res.discountAmount,
+          type: res.coupon!.type,
+          discountValue: res.coupon!.discountValue
+        });
         showNotification("تم تطبيق الكوبون بنجاح", "success");
       }
     } catch {
@@ -193,6 +258,9 @@ export default function CheckoutPage() {
         taxRate: 0,
         discount,
         couponCode: appliedCoupon?.code ?? null,
+        couponId: appliedCoupon?.id ?? null,
+        discountValue: appliedCoupon?.discountValue ?? 0,
+        discountType: (appliedCoupon?.type as any) ?? undefined,
         paymentMethod: form.paymentMethod,
         source: "storefront",
         notes: `طلب من المتجر — طريقة الدفع: ${paymentLabel}`,
@@ -217,7 +285,7 @@ export default function CheckoutPage() {
       // Record coupon redemption through the shared service (auto-disables at limit,
       // emits coupon.used → admin coupon list updates live).
       if (appliedCoupon) {
-        CouponService.incrementUsage(appliedCoupon.code);
+        await CouponService.incrementUsage(appliedCoupon.code);
       }
 
       analytics.trackPurchaseSuccess(created.orderNumber, cart, cartTotal, form.paymentMethod);
@@ -589,6 +657,8 @@ export default function CheckoutPage() {
                   <div className="flex gap-2">
                     <input
                       type="text"
+                      id="couponInput"
+                      aria-label="رمز الكوبون"
                       value={couponInput}
                       onChange={(e) => { setCouponInput(e.target.value); setCouponError(""); }}
                       onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleApplyCoupon(); } }}

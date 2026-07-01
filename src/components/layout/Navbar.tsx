@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { NavigationService } from "@/lib/services/storefront/navigation.service";
+import { StoreService } from "@/lib/services/storefront/store.service";
 import { useEventSubscribeMany } from "@/hooks/useEventBus";
 import { useStore } from "@/context/StoreContext";
 import { IconSearch as Search, IconShoppingBag as ShoppingBag, IconX as X, IconPlus as Plus, IconMinus as Minus, IconMenu2 as Menu, IconUser as User, IconMessageCircle as MessageCircle } from "@tabler/icons-react";
@@ -151,6 +152,8 @@ export default function Navbar() {
 
   const [leftLinks, setLeftLinks] = useState(DEFAULT_LEFT_LINKS);
   const [rightLinks, setRightLinks] = useState(DEFAULT_RIGHT_LINKS);
+  const [storeAddress, setStoreAddress] = useState("المهندسين، الجيزة، مصر");
+  const [storeTitle, setStoreTitle]   = useState("أتيلييه أورا الرئيسي");
 
   const loadNavLinks = useCallback(async () => {
     try {
@@ -165,8 +168,18 @@ export default function Navbar() {
     }
   }, []);
 
-  useEffect(() => { loadNavLinks(); }, [loadNavLinks]);
-  useEventSubscribeMany(['website.changed'], loadNavLinks);
+  const loadStoreInfo = useCallback(async () => {
+    try {
+      const info = await StoreService.getInfo();
+      if (info.address) setStoreAddress(info.address);
+      if (info.storeName) setStoreTitle(info.storeName);
+    } catch {
+      // keep defaults
+    }
+  }, []);
+
+  useEffect(() => { loadNavLinks(); loadStoreInfo(); }, [loadNavLinks, loadStoreInfo]);
+  useEventSubscribeMany(['website.changed'], () => { loadNavLinks(); loadStoreInfo(); });
 
   return (
     <>
@@ -390,8 +403,8 @@ export default function Navbar() {
 
                 {/* Brand Info */}
                 <div className="flex flex-col gap-2 text-[11px] font-sans text-text-secondary font-light">
-                  <p className="font-medium text-text-primary">أتيلييه أورا الرئيسي</p>
-                  <p>المهندسين، الجيزة، مصر</p>
+                  <p className="font-medium text-text-primary">{storeTitle}</p>
+                  <p>{storeAddress}</p>
                 </div>
               </motion.div>
             </motion.div>

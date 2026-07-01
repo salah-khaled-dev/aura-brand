@@ -5,16 +5,20 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   error?: string;
 }
 
-export function LuxuryInput({ label, error, className = "", ...props }: InputProps) {
+export function LuxuryInput({ label, error, className = "", id, ...props }: InputProps) {
+  const generatedId = id || (label ? `input-${label.replace(/\s+/g, '-').toLowerCase()}-${Math.random().toString(36).substring(2, 6)}` : undefined);
   return (
     <div className={`flex flex-col gap-1 w-full ${className}`}>
       {label && (
-        <label className="text-[10px] uppercase-letter-spacing font-bold text-text-secondary">
+        <label htmlFor={generatedId} className="text-[10px] uppercase-letter-spacing font-bold text-text-secondary">
           {label}
         </label>
       )}
       <div className="relative">
         <input
+          id={generatedId}
+          aria-required={props.required}
+          aria-invalid={!!error}
           className="peer w-full bg-transparent border-b border-brand-border py-2 px-1 text-sm font-light text-text-primary outline-none transition-colors duration-300 placeholder:text-text-secondary/40"
           {...props}
         />
@@ -31,16 +35,20 @@ interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
   error?: string;
 }
 
-export function LuxurySelect({ label, options, error, className = "", ...props }: SelectProps) {
+export function LuxurySelect({ label, options, error, className = "", id, ...props }: SelectProps) {
+  const generatedId = id || (label ? `select-${label.replace(/\s+/g, '-').toLowerCase()}-${Math.random().toString(36).substring(2, 6)}` : undefined);
   return (
     <div className={`flex flex-col gap-1 w-full ${className}`}>
       {label && (
-        <label className="text-[10px] uppercase-letter-spacing font-bold text-text-secondary">
+        <label htmlFor={generatedId} className="text-[10px] uppercase-letter-spacing font-bold text-text-secondary">
           {label}
         </label>
       )}
       <div className="relative">
         <select
+          id={generatedId}
+          aria-required={props.required}
+          aria-invalid={!!error}
           className="peer w-full bg-transparent border-b border-brand-border py-2 px-1 text-sm font-light text-text-primary outline-none transition-colors duration-300 appearance-none cursor-pointer"
           {...props}
         >
@@ -68,16 +76,20 @@ interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement
   error?: string;
 }
 
-export function LuxuryTextarea({ label, error, className = "", ...props }: TextareaProps) {
+export function LuxuryTextarea({ label, error, className = "", id, ...props }: TextareaProps) {
+  const generatedId = id || (label ? `textarea-${label.replace(/\s+/g, '-').toLowerCase()}-${Math.random().toString(36).substring(2, 6)}` : undefined);
   return (
     <div className={`flex flex-col gap-1 w-full ${className}`}>
       {label && (
-        <label className="text-[10px] uppercase-letter-spacing font-bold text-text-secondary">
+        <label htmlFor={generatedId} className="text-[10px] uppercase-letter-spacing font-bold text-text-secondary">
           {label}
         </label>
       )}
       <div className="relative">
         <textarea
+          id={generatedId}
+          aria-required={props.required}
+          aria-invalid={!!error}
           className="peer w-full bg-transparent border-b border-brand-border py-2 px-1 text-sm font-light text-text-primary outline-none transition-colors duration-300 placeholder:text-text-secondary/40 resize-y min-h-[80px]"
           {...props}
         />

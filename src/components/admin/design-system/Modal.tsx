@@ -61,6 +61,8 @@ export function Modal({ isOpen, onClose, title, children, footer, maxWidth, size
             transition={{ duration: 0.3, type: 'spring', bounce: 0.2 }}
             className={`relative w-full ${maxWidthClasses[resolvedMaxWidth]} max-h-[90vh] flex flex-col bg-[var(--admin-bg-surface)] rounded-[var(--admin-radius-2xl)] shadow-[var(--admin-shadow-float)] border border-[var(--admin-border-light)] overflow-hidden`}
             onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
           >
             <div className="flex items-center justify-between p-6 border-b border-[var(--admin-border-base)] bg-[var(--admin-bg-card)]">
               <h2 className="text-xl font-semibold text-[var(--admin-text-base)] tracking-tight">{title}</h2>

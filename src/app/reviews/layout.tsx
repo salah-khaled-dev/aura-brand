@@ -1,18 +1,14 @@
-import { Metadata } from "next";
+import type { Metadata } from 'next';
+import { generatePageMetadata } from '@/utils/seo-helper';
 
-export const metadata: Metadata = {
-  title: "آراء العميلات | AURA",
-  description: "تجارب حقيقية من عميلات دار أورا — تقييمات وآراء صادقة حول الجودة والحرفية والخدمة.",
-  openGraph: {
-    title: "آراء العميلات | AURA",
-    description: "تجارب حقيقية من عميلات دار أورا — تقييمات وآراء صادقة.",
-    url: "https://aura-fashion-virid.vercel.app/reviews",
-  },
-  alternates: {
-    canonical: "https://aura-fashion-virid.vercel.app/reviews",
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return generatePageMetadata(
+    'reviews',
+    'آراء العملاء | دار أورا',
+    'اقرئي آراء وتجارب عميلات دار أورا مع تصاميم الكوتور الراقية.'
+  );
+}
 
 export default function ReviewsLayout({ children }: { children: React.ReactNode }) {
-  return children;
+  return <>{children}</>;
 }

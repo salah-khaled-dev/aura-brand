@@ -20,7 +20,7 @@ export interface Coupon {
   excludedProducts: string[];
 }
 
-export let mockCoupons: Coupon[] = [
+const couponsSeed: Coupon[] = [
   {
     id: 'coup_1',
     code: 'WELCOME2027',
@@ -78,9 +78,20 @@ export let mockCoupons: Coupon[] = [
   }
 ];
 
-mockCoupons = mockStorage.read('coupons', mockCoupons);
+export const getCouponsSeed = (): Coupon[] => couponsSeed;
+
+export let mockCoupons: Coupon[] = mockStorage.read('coupons', couponsSeed);
 
 export const updateMockCoupons = (newCoupons: Coupon[]) => {
   mockCoupons = newCoupons;
   mockStorage.write('coupons', newCoupons);
+};
+
+export const getLiveCoupons = (): Coupon[] => mockCoupons;
+
+export const refreshFromStorage = (): boolean => {
+  const persisted = mockStorage.read('coupons', couponsSeed);
+  if (JSON.stringify(persisted) === JSON.stringify(mockCoupons)) return false;
+  mockCoupons = persisted;
+  return true;
 };

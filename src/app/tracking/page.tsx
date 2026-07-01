@@ -12,8 +12,19 @@ import { OrderService } from "@/lib/services/order.service";
 import type { Order } from "@/data/mock/orders";
 import { useEventSubscribeMany } from "@/hooks/useEventBus";
 import { getStatusMeta, buildCustomerTimeline, estimateDelivery } from "@/lib/orders/order-status";
+import { ContentService } from "@/lib/services/storefront/content.service";
+import { StoreService } from "@/lib/services/storefront/store.service";
 
 type SearchStatus = "idle" | "loading" | "found" | "error";
+
+const DEFAULT_CONTENT = {
+  tracking_hero_title:    'تتبع طلبكِ',
+  tracking_hero_label:    'مسار مقتنياتكِ',
+  tracking_hero_subtitle: 'تابعي رحلة تصميم وتجهيز قطع أورا الفاخرة خطوة بخطوة، بدءاً من القص والأشغال اليدوية بالأتيلييه وحتى وصول المندوب لباب منزلكِ.',
+  tracking_support_title: 'هل تحتاجين إلى مساعدة؟',
+  tracking_support_text:  'منسقو أتيلييه أورا جاهزون للتواصل معكِ وتحديثكِ بتفاصيل المقاسات الدقيقة أو حالة التحويل عبر الواتساب.',
+  tracking_support_btn:   'تواصلي معنا',
+};
 
 function formatEgp(value: number) {
   return `${value.toLocaleString("en-US")} ج.م`;
@@ -24,7 +35,7 @@ function formatArDate(iso?: string) {
   return new Date(iso).toLocaleDateString("ar-EG", { year: "numeric", month: "long", day: "numeric" });
 }
 
-function TrackingContent() {
+function TrackingContent({ c, whatsappUrl }: { c: typeof DEFAULT_CONTENT; whatsappUrl: string }) {
   const searchParams = useSearchParams();
   const [orderId, setOrderId] = useState("");
   const [contact, setContact] = useState("");
@@ -49,7 +60,6 @@ function TrackingContent() {
     }
   }, []);
 
-  // Auto-load ?id= query param (e.g. arriving from the checkout success screen).
   useEffect(() => {
     const idParam = searchParams.get("id");
     if (idParam) {
@@ -58,8 +68,6 @@ function TrackingContent() {
     }
   }, [searchParams, lookup]);
 
-  // Live sync: when the admin changes this order's status, refresh it silently —
-  // no refresh, no re-search needed.
   useEventSubscribeMany(["order.updated", "order.created", "order.deleted"], () => {
     if (order) lookup(order.orderNumber, "silent");
   });
@@ -120,9 +128,7 @@ function TrackingContent() {
           {status === "idle" && (
             <motion.div
               key="idle"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               className="text-center py-12 flex flex-col items-center gap-4 bg-background-secondary border border-brand-border w-full max-w-[600px] px-6"
             >
               <Search className="w-10 h-10 stroke-[1.2] text-brand-border" />
@@ -136,9 +142,7 @@ function TrackingContent() {
           {status === "error" && (
             <motion.div
               key="error"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
+              initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
               className="text-center py-12 flex flex-col items-center gap-4 bg-background-secondary border border-brand-border w-full max-w-[600px] px-6"
             >
               <AlertCircle className="w-10 h-10 stroke-[1.2] text-accent" />
@@ -154,9 +158,7 @@ function TrackingContent() {
           {status === "found" && order && meta && (
             <motion.div
               key="found"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }}
               className="w-full flex flex-col gap-12"
             >
               {/* Timeline Container */}
@@ -178,7 +180,6 @@ function TrackingContent() {
                   </div>
                 </div>
 
-                {/* Latest update from the atelier */}
                 {order.customerUpdate && (
                   <div className="bg-accent/5 border border-accent/20 p-4 flex flex-col gap-1">
                     <span className="font-sans text-[10px] text-accent font-bold uppercase">آخر تحديث من الأتيلييه</span>
@@ -192,7 +193,6 @@ function TrackingContent() {
                 {/* Progress Timeline */}
                 <div className="relative flex flex-col md:flex-row justify-between items-start md:items-center gap-8 md:gap-4 py-6">
                   <div className="absolute top-1/2 left-4 right-4 h-[1px] bg-brand-border -translate-y-1/2 -z-10 hidden md:block" />
-
                   {timeline.map((step) => {
                     const active = step.state === "done" || step.state === "current";
                     return (
@@ -200,20 +200,12 @@ function TrackingContent() {
                         key={step.key}
                         className="flex md:flex-col items-center md:items-center gap-4 md:gap-2 text-right md:text-center relative z-10 bg-background-secondary md:px-2 flex-grow"
                       >
-                        <div
-                          className={`w-9 h-9 rounded-full font-display text-xs font-semibold flex items-center justify-center border transition-colors duration-500 ${
-                            active
-                              ? "bg-accent text-background-secondary border-accent"
-                              : "bg-background-secondary text-text-secondary border-brand-border"
-                          } ${step.state === "current" ? "ring-2 ring-accent/30" : ""}`}
-                        >
+                        <div className={`w-9 h-9 rounded-full font-display text-xs font-semibold flex items-center justify-center border transition-colors duration-500 ${active ? "bg-accent text-background-secondary border-accent" : "bg-background-secondary text-text-secondary border-brand-border"} ${step.state === "current" ? "ring-2 ring-accent/30" : ""}`}>
                           {step.state === "done" ? <IconCheck className="w-4 h-4" /> : null}
                           {step.state !== "done" && <span className="w-1.5 h-1.5 rounded-full bg-current" />}
                         </div>
                         <div>
-                          <h4 className={`font-sans text-xs font-bold ${active ? "text-text-primary" : "text-text-secondary"}`}>
-                            {step.label}
-                          </h4>
+                          <h4 className={`font-sans text-xs font-bold ${active ? "text-text-primary" : "text-text-secondary"}`}>{step.label}</h4>
                           <span className="font-sans text-[10px] text-text-secondary font-light block mt-0.5">
                             {step.date ? formatArDate(step.date) : step.description}
                           </span>
@@ -251,17 +243,13 @@ function TrackingContent() {
                   </div>
                 </div>
 
-                {/* Products */}
                 <div className="flex flex-col gap-4">
                   {order.items.map((item) => (
                     <div key={item.id} className="flex gap-4 items-center">
                       <div className="relative aspect-[3/4] w-14 shrink-0 overflow-hidden border border-brand-border bg-background-primary">
                         <Image
                           src={item.image || "/images/products/product_evening_gown.png"}
-                          alt={item.productName}
-                          fill
-                          sizes="56px"
-                          className="object-cover"
+                          alt={item.productName} fill sizes="56px" className="object-cover"
                         />
                       </div>
                       <div className="flex-grow min-w-0">
@@ -277,7 +265,6 @@ function TrackingContent() {
                   ))}
                 </div>
 
-                {/* Shipment details (shown once the atelier adds them) */}
                 {(order.trackingNumber || order.shippingCompany || order.courierName) && (
                   <div className="border-t border-brand-border pt-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
                     {order.shippingCompany && (
@@ -301,13 +288,11 @@ function TrackingContent() {
                   </div>
                 )}
 
-                {/* Shipping address */}
                 <div className="border-t border-brand-border pt-4">
                   <span className="font-sans text-[10px] text-text-secondary font-medium">عنوان الشحن</span>
                   <p className="font-sans text-xs text-text-primary mt-0.5 leading-relaxed">{order.shippingAddress || "—"}</p>
                 </div>
 
-                {/* Last updated */}
                 <div className="border-t border-brand-border pt-4 flex justify-between items-center">
                   <span className="font-sans text-[10px] text-text-secondary font-medium">آخر تحديث</span>
                   <span className="font-sans text-xs font-semibold text-text-primary">{formatArDate(order.updatedAt)}</span>
@@ -320,13 +305,13 @@ function TrackingContent() {
 
       {/* Support Section */}
       <section className="w-full max-w-[600px] border-t border-brand-border pt-12 text-center flex flex-col items-center gap-4">
-        <h3 className="font-sans text-lg font-light text-text-primary">هل تحتاجين إلى مساعدة؟</h3>
+        <h3 className="font-sans text-lg font-light text-text-primary">{c.tracking_support_title}</h3>
         <p className="font-sans text-xs text-text-secondary font-light max-w-xs leading-relaxed">
-          منسقو أتيلييه أورا جاهزون للتواصل معكِ وتحديثكِ بتفاصيل المقاسات الدقيقة أو حالة التحويل عبر الواتساب.
+          {c.tracking_support_text}
         </p>
         <div className="mt-2">
-          <a href="https://wa.me/201000000000" target="_blank" rel="noopener noreferrer">
-            <Button variant="dark-outline" className="px-10">تواصلي معنا</Button>
+          <a href={whatsappUrl} target="_blank" rel="noopener noreferrer">
+            <Button variant="dark-outline" className="px-10">{c.tracking_support_btn}</Button>
           </a>
         </div>
       </section>
@@ -335,14 +320,35 @@ function TrackingContent() {
 }
 
 export default function TrackingPage() {
+  const [c, setC] = useState(DEFAULT_CONTENT);
+  const [whatsappUrl, setWhatsappUrl] = useState('https://wa.me/201000000000');
+
+  const loadContent = useCallback(async () => {
+    try {
+      const [blocks, storeInfo] = await Promise.all([
+        ContentService.getContentByGroup('pages'),
+        StoreService.getInfo(),
+      ]);
+      const map: Record<string, string> = {};
+      blocks.forEach(b => { map[b.key] = b.value; });
+      setC(prev => ({ ...prev, ...map }));
+      if (storeInfo.socialMedia?.whatsapp) setWhatsappUrl(storeInfo.socialMedia.whatsapp);
+    } catch {
+      // keep defaults
+    }
+  }, []);
+
+  useEffect(() => { loadContent(); }, [loadContent]);
+  useEventSubscribeMany(['website.changed'], loadContent);
+
   return (
     <div className="bg-background-primary min-h-screen flex flex-col items-center">
       <section className="w-full bg-background-secondary py-16 md:py-24 border-b border-brand-border flex flex-col items-center">
         <div className="max-w-[720px] mx-auto px-6 text-center">
-          <span className="font-sans text-[10px] text-accent font-bold uppercase">مسار مقتنياتكِ</span>
-          <h1 className="font-sans text-3xl font-light text-text-primary mt-2">تتبع طلبكِ</h1>
+          <span className="font-sans text-[10px] text-accent font-bold uppercase">{c.tracking_hero_label}</span>
+          <h1 className="font-sans text-3xl font-light text-text-primary mt-2">{c.tracking_hero_title}</h1>
           <p className="font-sans text-xs md:text-sm text-text-secondary font-light mt-3 leading-relaxed">
-            تابعي رحلة تصميم وتجهيز قطع أورا الفاخرة خطوة بخطوة، بدءاً من القص والأشغال اليدوية بالأتيلييه وحتى وصول المندوب لباب منزلكِ.
+            {c.tracking_hero_subtitle}
           </p>
         </div>
       </section>
@@ -352,7 +358,7 @@ export default function TrackingPage() {
           <TrackingResultSkeleton />
         </div>
       }>
-        <TrackingContent />
+        <TrackingContent c={c} whatsappUrl={whatsappUrl} />
       </Suspense>
     </div>
   );

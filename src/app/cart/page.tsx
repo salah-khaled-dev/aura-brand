@@ -1,14 +1,37 @@
 "use client";
 
-import React from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useStore } from "@/context/StoreContext";
 import { IconShoppingBag as ShoppingBag, IconPlus as Plus, IconMinus as Minus, IconX as X } from "@tabler/icons-react";
 import Button from "@/components/ui/Button";
+import { ContentService } from "@/lib/services/storefront/content.service";
+import { useEventSubscribeMany } from "@/hooks/useEventBus";
+
+const DEFAULT_EMPTY = {
+  cart_empty_title: 'حقيبتكِ فارغة حالياً',
+  cart_empty_text:  'تصفحي الكولكشن واختاري قطعكِ المفضلة.',
+  cart_empty_btn:   'زيارة المتجر الكوتور',
+};
 
 export default function CartPage() {
   const { cart, cartSubtotal, cartCount, updateQuantity, removeFromCart } = useStore();
+  const [empty, setEmpty] = useState(DEFAULT_EMPTY);
+
+  const loadContent = useCallback(async () => {
+    try {
+      const blocks = await ContentService.getContentByGroup('pages');
+      const map: Record<string, string> = {};
+      blocks.forEach(b => { map[b.key] = b.value; });
+      setEmpty(prev => ({ ...prev, ...map }));
+    } catch {
+      // keep defaults
+    }
+  }, []);
+
+  useEffect(() => { loadContent(); }, [loadContent]);
+  useEventSubscribeMany(['website.changed'], loadContent);
 
   return (
     <div className="bg-background-primary min-h-screen flex flex-col items-center">
@@ -33,11 +56,11 @@ export default function CartPage() {
           <div className="text-center py-20 bg-background-secondary border border-brand-border max-w-xl mx-auto flex flex-col items-center gap-6">
             <ShoppingBag className="w-12 h-12 stroke-[1] text-brand-border" />
             <div>
-              <h3 className="font-sans text-lg font-light text-text-primary">حقيبتكِ فارغة حالياً</h3>
-              <p className="font-sans text-xs text-text-secondary font-light mt-1">تصفحي الكولكشن واختاري قطعكِ المفضلة.</p>
+              <h3 className="font-sans text-lg font-light text-text-primary">{empty.cart_empty_title}</h3>
+              <p className="font-sans text-xs text-text-secondary font-light mt-1">{empty.cart_empty_text}</p>
             </div>
             <Link href="/shop">
-              <Button variant="primary">زيارة المتجر الكوتور</Button>
+              <Button variant="primary">{empty.cart_empty_btn}</Button>
             </Link>
           </div>
         ) : (

@@ -1,8 +1,10 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
+import { StoreService } from "@/lib/services/storefront/store.service";
 import { getWhatsAppUrl } from "@/config/whatsapp";
+import { useEventSubscribeMany } from "@/hooks/useEventBus";
 
 interface WhatsAppButtonProps {
   message?: string;
@@ -10,15 +12,26 @@ interface WhatsAppButtonProps {
 
 export default function WhatsAppButton({ message }: WhatsAppButtonProps) {
   const [mounted, setMounted] = useState(false);
+  const [href, setHref] = useState(getWhatsAppUrl(message));
+
+  const loadHref = useCallback(async () => {
+    try {
+      const info = await StoreService.getInfo();
+      const waUrl = info.socialMedia?.whatsapp;
+      if (waUrl) setHref(waUrl);
+    } catch {
+      // keep default from config
+    }
+  }, [message]);
 
   useEffect(() => {
-     
     setMounted(true);
-  }, []);
+    loadHref();
+  }, [loadHref]);
+
+  useEventSubscribeMany(['website.changed'], loadHref);
 
   if (!mounted) return null;
-
-  const href = getWhatsAppUrl(message);
 
   return (
     <AnimatePresence>
@@ -41,11 +54,11 @@ export default function WhatsAppButton({ message }: WhatsAppButtonProps) {
       >
         {/* Premium gold pulsing ring */}
         <span className="absolute inset-0 rounded-full bg-accent/20 opacity-20 animate-ping pointer-events-none [animation-duration:3s] group-hover:bg-[#25D366]/20 transition-colors duration-300" />
-        
+
         {/* Official WhatsApp SVG Icon */}
-        <svg 
-          viewBox="0 0 24 24" 
-          fill="currentColor" 
+        <svg
+          viewBox="0 0 24 24"
+          fill="currentColor"
           className="h-6.5 w-6.5 relative z-10 transition-colors duration-300"
           aria-hidden="true"
         >

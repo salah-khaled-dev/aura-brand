@@ -1,14 +1,37 @@
 "use client";
 
-import React from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useStore } from "@/context/StoreContext";
 import { ProductCard } from "@/components/ui/Card";
 import { IconHeart as Heart } from "@tabler/icons-react";
 import Button from "@/components/ui/Button";
+import { ContentService } from "@/lib/services/storefront/content.service";
+import { useEventSubscribeMany } from "@/hooks/useEventBus";
+
+const DEFAULT_EMPTY = {
+  wishlist_empty_title: 'مفضلتكِ فارغة',
+  wishlist_empty_text:  'ابدئي بحفظ القطع المفضلة لديكِ بالضغط على رمز القلب أثناء التصفح',
+  wishlist_empty_btn:   'زيارة المتجر الكوتور',
+};
 
 export default function WishlistPage() {
   const { wishlist } = useStore();
+  const [empty, setEmpty] = useState(DEFAULT_EMPTY);
+
+  const loadContent = useCallback(async () => {
+    try {
+      const blocks = await ContentService.getContentByGroup('pages');
+      const map: Record<string, string> = {};
+      blocks.forEach(b => { map[b.key] = b.value; });
+      setEmpty(prev => ({ ...prev, ...map }));
+    } catch {
+      // keep defaults
+    }
+  }, []);
+
+  useEffect(() => { loadContent(); }, [loadContent]);
+  useEventSubscribeMany(['website.changed'], loadContent);
 
   return (
     <div className="bg-background-primary min-h-screen flex flex-col items-center">
@@ -33,11 +56,11 @@ export default function WishlistPage() {
           <div className="text-center py-20 bg-background-secondary border border-brand-border max-w-xl mx-auto flex flex-col items-center gap-6">
             <Heart className="w-12 h-12 stroke-[1.2] text-accent animate-pulse" />
             <div>
-              <h3 className="font-sans text-base font-semibold text-text-primary">مفضلتكِ فارغة</h3>
-              <p className="text-xs text-text-secondary font-light mt-1">ابدئي بحفظ القطع المفضلة لديكِ بالضغط على رمز القلب أثناء التصفح</p>
+              <h3 className="font-sans text-base font-semibold text-text-primary">{empty.wishlist_empty_title}</h3>
+              <p className="text-xs text-text-secondary font-light mt-1">{empty.wishlist_empty_text}</p>
             </div>
             <Link href="/shop">
-              <Button variant="primary">زيارة المتجر الكوتور</Button>
+              <Button variant="primary">{empty.wishlist_empty_btn}</Button>
             </Link>
           </div>
         ) : (
@@ -59,4 +82,3 @@ export default function WishlistPage() {
     </div>
   );
 }
-
