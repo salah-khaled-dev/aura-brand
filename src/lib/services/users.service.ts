@@ -44,8 +44,6 @@ export function validatePasswordStrength(pw: string): PasswordStrength {
   return { ok: true };
 }
 
-export type AuthFailure = 'invalid_credentials' | 'inactive';
-
 /** Password credential store — keyed by staff id, kept apart from profile data. */
 let MOCK_CREDENTIALS: Record<string, string> = {
   staff_1: hashPassword('123456'),
@@ -239,69 +237,6 @@ export const UsersService = {
     }
     persistUsers();
     eventBus.emit('users.changed');
-    return member;
-  },
-
-  /** Authenticate by username OR email + password. Returns the staff member or throws AuthFailure-coded error. */
-  async authenticate(identifier: string, password: string): Promise<MockStaffMember> {
-    console.log('[Auth Debug] authenticate called with:', { identifier, password });
-    await new Promise(r => setTimeout(r, 300));
-    const id = identifier.trim().toLowerCase();
-
-    // Self-healing: if trying to login as admin, make sure the user profile exists, is active, and credentials are set
-    if (id === 'admin@aura.com' || id === 'admin') {
-      const adminIdx = MOCK_STAFF.findIndex(s => s.id === 'staff_1' || s.email.toLowerCase() === 'admin@aura.com');
-      console.log('[Auth Debug] Admin index found:', adminIdx);
-      if (adminIdx === -1) {
-        console.log('[Auth Debug] Admin missing! Recreating...');
-        const newAdmin: MockStaffMember = {
-          id: 'staff_1', nameAr: 'أحمد العدوي', username: 'admin', email: 'admin@aura.com',
-          phone: '+20 100 000 0001', roleId: 'role_1', roleNameAr: 'المسؤول الأول', roleColor: 'purple',
-          avatarUrl: null, lastLoginAt: new Date().toISOString(), loginCount: 42,
-          isSuperAdmin: true, status: 'active', createdAt: '2024-01-01T00:00:00Z',
-        };
-        MOCK_STAFF.push(newAdmin);
-        MOCK_CREDENTIALS[newAdmin.id] = hashPassword('123456');
-        persistUsers();
-      } else if (MOCK_STAFF[adminIdx].status !== 'active') {
-        console.log('[Auth Debug] Admin inactive! Activating...');
-        MOCK_STAFF[adminIdx].status = 'active';
-        MOCK_CREDENTIALS[MOCK_STAFF[adminIdx].id] = hashPassword('123456');
-        persistUsers();
-      }
-    }
-
-    // Default passwords dictionary for auto-repair
-    const defaultPasswords: Record<string, string> = {
-      'admin@aura.com': '123456',
-      'manager@aura.com': 'manager123',
-      'inventory@aura.com': 'inventory123',
-      'finance@aura.com': 'finance123',
-      'marketing@aura.com': 'marketing123',
-    };
-
-    const member = MOCK_STAFF.find(s => s.username.toLowerCase() === id || s.email.toLowerCase() === id);
-    console.log('[Auth Debug] Found member:', member);
-    if (!member) throw new Error('invalid_credentials' satisfies AuthFailure);
-
-    // If the input password matches the default password for a default account, heal its hash in storage
-    if (member.email in defaultPasswords && password === defaultPasswords[member.email]) {
-      const hash = MOCK_CREDENTIALS[member.id];
-      console.log('[Auth Debug] Healing default user check. Current hash in credentials:', hash);
-      if (!hash || !verifyPassword(password, hash)) {
-        console.log('[Auth Debug] Mismatch or missing hash detected. Re-hashing password...');
-        MOCK_CREDENTIALS[member.id] = hashPassword(password);
-        persistUsers();
-        console.log('[Auth Debug] Healed hash to:', MOCK_CREDENTIALS[member.id]);
-      }
-    }
-
-    const hash = MOCK_CREDENTIALS[member.id];
-    const passwordVerified = hash ? verifyPassword(password, hash) : false;
-    console.log('[Auth Debug] Verification details:', { hash, passwordVerified, memberStatus: member.status });
-    
-    if (!hash || !passwordVerified) throw new Error('invalid_credentials' satisfies AuthFailure);
-    if (member.status !== 'active') throw new Error('inactive' satisfies AuthFailure);
     return member;
   },
 

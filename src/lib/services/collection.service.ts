@@ -22,36 +22,7 @@ export interface Collection {
   updatedAt: string;
 }
 
-let MOCK_COLLECTIONS: Collection[] = [
-  {
-    id: "col_summer",
-    name: "Summer 2026 Collection",
-    slug: "summer-2026",
-    description: "Light, breezy styles for the summer.",
-    type: 'manual',
-    image: "https://images.unsplash.com/photo-1515372039744-b8f02a3ae446?w=800",
-    matchType: 'any',
-    rules: [],
-    productIds: ["prod_1"],
-    status: 'active',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  },
-  {
-    id: "col_clearance",
-    name: "Clearance Sale",
-    slug: "clearance",
-    description: "Products with price drop.",
-    type: 'automatic',
-    image: "",
-    matchType: 'all',
-    rules: [{ field: 'tag', operator: 'contains', value: 'clearance' }],
-    productIds: [],
-    status: 'active',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  }
-];
+let MOCK_COLLECTIONS: Collection[] = [];
 
 MOCK_COLLECTIONS = mockStorage.read('collections', MOCK_COLLECTIONS);
 const persistCollections = () => mockStorage.write('collections', MOCK_COLLECTIONS);

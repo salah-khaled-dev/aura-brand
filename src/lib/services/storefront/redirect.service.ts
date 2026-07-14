@@ -9,10 +9,7 @@ export interface Redirect {
   hits: number;
 }
 
-let mockRedirects: Redirect[] = [
-  { id: 'rd-1', oldUrl: '/summer-sale-2025', newUrl: '/collections/summer-2026', type: 301, status: 'active', hits: 1420 },
-  { id: 'rd-2', oldUrl: '/about', newUrl: '/pages/about-us', type: 301, status: 'active', hits: 45 },
-];
+let mockRedirects: Redirect[] = [];
 
 mockRedirects = mockStorage.read('storefront.redirects', mockRedirects);
 const persistRedirects = () => mockStorage.write('storefront.redirects', mockRedirects);

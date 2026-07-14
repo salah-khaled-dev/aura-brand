@@ -115,18 +115,22 @@ export function PermissionProvider({ children }: { children: React.ReactNode }) 
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
     // The effective role comes from the authenticated user's role.
-    const currentUser = AuthService.getCurrentUser();
-    setUser(currentUser);
-    const roleId = currentUser?.roleId ?? DEFAULT_ROLE_ID;
-    setActualRoleId(roleId);
-    // Restore any "view as" override chosen earlier, else mirror the real role.
-    const saved = typeof window !== 'undefined' ? window.localStorage.getItem(VIEW_AS_STORAGE_KEY) : null;
-    setViewAsRoleIdState(saved || roleId);
-    loadRoles();
+    (async () => {
+      const currentUser = await AuthService.getCurrentUser();
+      if (cancelled) return;
+      setUser(currentUser);
+      const roleId = currentUser?.roleId ?? DEFAULT_ROLE_ID;
+      setActualRoleId(roleId);
+      // Restore any "view as" override chosen earlier, else mirror the real role.
+      const saved = typeof window !== 'undefined' ? window.localStorage.getItem(VIEW_AS_STORAGE_KEY) : null;
+      setViewAsRoleIdState(saved || roleId);
+      loadRoles();
+    })();
     // Re-scope live when roles/permissions are edited anywhere.
     const unsub = eventBus.subscribe('users.changed', () => { loadRoles(); });
-    return () => unsub();
+    return () => { cancelled = true; unsub(); };
   }, [loadRoles]);
 
   // Synchronize authenticated user profile updates in real-time
@@ -255,8 +259,8 @@ export function PermissionProvider({ children }: { children: React.ReactNode }) 
     if (prevViewAsRoleIdRef.current !== viewAsRoleId) {
       const fromRole = roles.find(r => r.id === prevViewAsRoleIdRef.current)?.nameAr || prevViewAsRoleIdRef.current;
       const toRole = roles.find(r => r.id === viewAsRoleId)?.nameAr || viewAsRoleId;
-      const originalUser = AuthService.getCurrentUser();
-      
+      const originalUser = user;
+
       if (originalUser) {
         const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
         let platform = 'Unknown';
@@ -297,7 +301,7 @@ export function PermissionProvider({ children }: { children: React.ReactNode }) 
 
       prevViewAsRoleIdRef.current = viewAsRoleId;
     }
-  }, [loaded, viewAsRoleId, roles]);
+  }, [loaded, viewAsRoleId, roles, user]);
 
   const effectiveRole = roles.find(r => r.id === viewAsRoleId) ?? null;
   const isViewingAs = viewAsRoleId !== actualRoleId;

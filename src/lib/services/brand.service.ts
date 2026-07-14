@@ -12,18 +12,7 @@ export interface Brand {
   updatedAt: string;
 }
 
-let MOCK_BRANDS: Brand[] = [
-  {
-    id: "brand_aura",
-    name: "AURA Original",
-    slug: "aura-original",
-    logo: "https://aura-fashion-virid.vercel.app/logo.svg",
-    description: "The core AURA luxury line.",
-    status: 'active',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  }
-];
+let MOCK_BRANDS: Brand[] = [];
 
 MOCK_BRANDS = mockStorage.read('brands', MOCK_BRANDS);
 const persistBrands = () => mockStorage.write('brands', MOCK_BRANDS);

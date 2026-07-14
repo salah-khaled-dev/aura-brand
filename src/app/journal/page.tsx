@@ -33,7 +33,7 @@ export default function JournalPage() {
       </header>
 
       {/* Featured Article Section (Only show if no category filter is applied) */}
-      {!activeCategory && (
+      {!activeCategory && featuredArticle && (
         <section className="w-full max-w-[1280px] px-6 md:px-12 mb-20">
           <Link href={`/journal/${featuredArticle.slug}`} className="block group">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
@@ -129,7 +129,7 @@ export default function JournalPage() {
         
         {filteredArticles.length === 0 && (
           <div className="text-center py-20 text-text-secondary font-sans text-sm">
-            لا توجد مقالات في هذا التصنيف حالياً.
+            {mockArticles.length === 0 ? "لا توجد مقالات بعد." : "لا توجد مقالات في هذا التصنيف حالياً."}
           </div>
         )}
       </section>

@@ -96,98 +96,17 @@ export interface Capital {
   notes?: string;
 }
 
-export let mockSuppliers: Supplier[] = [
-  {
-    id: 'sup_1',
-    name: 'مصنع الحرير الذهبي',
-    supplierCode: 'SUP-001',
-    contactName: 'أحمد محمود',
-    email: 'ahmed@golden-silk.com',
-    phone: '+966500000001',
-    whatsapp: '+966500000001',
-    country: 'السعودية',
-    city: 'الرياض',
-    address: 'المنطقة الصناعية الثانية',
-    taxNumber: '300123456700003',
-    commercialRegistration: '1010123456',
-    paymentTerms: 'net_30',
-    currency: 'EGP',
-    materialsProvided: ['حرير خالص', 'بطائن حريرية'],
-    totalPurchases: 150000,
-    outstandingBalance: 25000,
-    status: 'active',
-    notes: 'مورد رئيسي'
-  }
-];
+export let mockSuppliers: Supplier[] = [];
 
-export let mockPurchaseOrders: PurchaseOrder[] = [
-  {
-    id: 'po_1',
-    supplierId: 'sup_1',
-    reference: 'PO-2027-001',
-    date: new Date().toISOString(),
-    expectedArrival: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
-    items: [
-      { name: 'حرير خالص (لفة 50 متر)', quantity: 10, unitCost: 500, total: 5000 }
-    ],
-    subtotal: 5000,
-    tax: 750,
-    shipping: 100,
-    total: 5850,
-    status: 'received',
-    paymentStatus: 'paid',
-    notes: ''
-  }
-];
+export let mockPurchaseOrders: PurchaseOrder[] = [];
 
-export let mockExpenses: Expense[] = [
-  {
-    id: 'exp_1',
-    name: 'فاتورة تسويق شهرية',
-    category: 'marketing',
-    amount: 5000,
-    currency: 'EGP',
-    date: new Date().toISOString(),
-    paymentMethod: 'bank_transfer',
-    description: 'حملة تسويقية عبر انستجرام لتشكيلة الخريف',
-    status: 'paid'
-  }
-];
+export let mockExpenses: Expense[] = [];
 
-export let mockAssets: Asset[] = [
-  {
-    id: 'ast_1',
-    name: 'ماكينات خياطة صناعية',
-    type: 'equipment',
-    purchaseDate: '2026-01-15T00:00:00Z',
-    currentValue: 120000,
-    depreciation: 15,
-    status: 'active',
-    documents: []
-  }
-];
+export let mockAssets: Asset[] = [];
 
-export let mockLiabilities: Liability[] = [
-  {
-    id: 'lib_1',
-    name: 'قرض تجاري متوسط الأجل',
-    type: 'loan',
-    amount: 500000,
-    dueDate: '2028-01-01T00:00:00Z',
-    status: 'unpaid'
-  }
-];
+export let mockLiabilities: Liability[] = [];
 
-export let mockCapital: Capital[] = [
-  {
-    id: 'cap_1',
-    type: 'increase',
-    owner: 'مؤسس الشركة',
-    amount: 1000000,
-    reason: 'ضخ سيولة للتوسع',
-    date: '2025-01-01T00:00:00Z'
-  }
-];
+export let mockCapital: Capital[] = [];
 
 mockSuppliers = mockStorage.read('suppliers', mockSuppliers);
 mockPurchaseOrders = mockStorage.read('purchase_orders', mockPurchaseOrders);

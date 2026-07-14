@@ -39,31 +39,7 @@ interface MediaLibraryModalProps {
   multiple?: boolean;
 }
 
-// Mock Data
-const mockMedia: MediaItem[] = [
-  {
-    id: 'm1',
-    url: 'https://images.unsplash.com/photo-1566162200424-a5ab04c40b8a?auto=format&fit=crop&q=80&w=800',
-    name: 'silk-gown-main.jpg',
-    size: 1024 * 1024 * 2.5,
-    dimensions: { width: 1200, height: 1600 },
-    tags: ['سهرة', 'فستان', 'حرير'],
-    isFavorite: true,
-    usedBy: [{ type: 'product', id: 'prod_1', name: 'فستان سهرة حريري' }],
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: 'm2',
-    url: 'https://images.unsplash.com/photo-1539533113208-f6df8cc8b543?auto=format&fit=crop&q=80&w=800',
-    name: 'winter-coat.jpg',
-    size: 1024 * 1024 * 1.8,
-    dimensions: { width: 1000, height: 1000 },
-    tags: ['شتوي', 'معطف'],
-    isFavorite: false,
-    usedBy: [{ type: 'product', id: 'prod_2', name: 'معطف شتوي كشمير' }],
-    createdAt: new Date().toISOString()
-  }
-];
+const mockMedia: MediaItem[] = [];
 
 export function MediaLibraryModal({ isOpen, onClose, onSelect }: MediaLibraryModalProps) {
   const [search, setSearch] = useState('');
@@ -121,6 +97,12 @@ export function MediaLibraryModal({ isOpen, onClose, onSelect }: MediaLibraryMod
 
             {/* Grid */}
             <div className="flex-1 overflow-y-auto p-4">
+              {mockMedia.length === 0 ? (
+                <div className="flex h-full flex-col items-center justify-center gap-2 text-center">
+                  <IconPhoto size={32} className="text-[var(--admin-text-subtle)]" />
+                  <p className="text-sm text-[var(--admin-text-subtle)]">لا توجد ملفات في مكتبة الوسائط بعد</p>
+                </div>
+              ) : (
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {mockMedia.map((item) => (
                   <div
@@ -146,6 +128,7 @@ export function MediaLibraryModal({ isOpen, onClose, onSelect }: MediaLibraryMod
                   </div>
                 ))}
               </div>
+              )}
             </div>
           </div>
 

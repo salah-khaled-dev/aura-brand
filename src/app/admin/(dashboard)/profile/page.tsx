@@ -84,8 +84,14 @@ export default function ProfilePage() {
         bio: profile.bio,
         avatar: profile.avatar
       });
-      // Keep the underlying user record (used by auth + RBAC) in sync.
+      // Keep the authenticated Supabase identity (used by auth + RBAC) in sync.
+      // The legacy mock staff record (keyed by 'staff_N' ids) no longer tracks
+      // the real Supabase user id, so it's best-effort only — never blocks the save.
       if (user) {
+        AuthService.updateCurrentUser({
+          name: profile.name,
+          avatarUrl: profile.avatar || null,
+        });
         try {
           await UsersService.updateStaff(user.id, {
             nameAr: profile.name,
@@ -94,15 +100,8 @@ export default function ProfilePage() {
             phone: profile.phone || null,
             avatarUrl: profile.avatar || null,
           });
-          AuthService.updateCurrentUser({
-            name: profile.name,
-            username: profile.username,
-            email: profile.email,
-            avatarUrl: profile.avatar || null,
-          });
-        } catch (e: any) {
-          toast.error(e?.message ?? adminAr.toasts.unexpectedError);
-          return;
+        } catch {
+          // No matching legacy mock staff record for this Supabase user — expected, ignore.
         }
       }
       toast.success(adminAr.toasts.dataSaved);
@@ -138,7 +137,7 @@ export default function ProfilePage() {
     setSaving(true);
     try {
       if (!user) throw new Error('انتهت الجلسة، يرجى تسجيل الدخول من جديد');
-      await UsersService.changePassword(user.id, currentPass, newPass);
+      await AuthService.changePassword(currentPass, newPass);
       toast.success('تم تحديث كلمة المرور بنجاح');
       setCurrentPass('');
       setNewPass('');

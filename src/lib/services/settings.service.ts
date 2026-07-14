@@ -10,10 +10,11 @@ export const SettingsService = {
   async updateSettings(data: Partial<Settings>): Promise<Settings> {
     return new Promise((resolve) => {
       setTimeout(() => {
-        const updated = { 
+        const updated: Settings = {
           store: { ...mockSettings.store, ...data.store },
+          management: { ...mockSettings.management, ...data.management },
+          payment: { ...mockSettings.payment, ...data.payment },
           seo: { ...mockSettings.seo, ...data.seo },
-          payment: { ...mockSettings.payment, ...data.payment }
         };
         updateMockSettings(updated);
         resolve(updated);

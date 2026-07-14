@@ -83,21 +83,7 @@ export interface RecordMovementInput {
   userId?: string;
 }
 
-let MOCK_MOVEMENTS: InventoryMovement[] = [
-  {
-    id: 'inv_mov_1',
-    productId: 'prod_1',
-    type: 'receive',
-    quantity: 50,
-    balanceBefore: 0,
-    balanceAfter: 50,
-    reason: 'رصيد افتتاحي',
-    referenceType: 'initial',
-    warehouseId: DEFAULT_WAREHOUSE_ID,
-    date: new Date(Date.now() - 86400000 * 5).toISOString(),
-    userId: 'admin_1',
-  },
-];
+let MOCK_MOVEMENTS: InventoryMovement[] = [];
 
 MOCK_MOVEMENTS = mockStorage.read('inventory.movements', MOCK_MOVEMENTS);
 const persistMovements = () => mockStorage.write('inventory.movements', MOCK_MOVEMENTS);

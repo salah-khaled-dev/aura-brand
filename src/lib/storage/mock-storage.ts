@@ -16,7 +16,7 @@ const NAMESPACE = 'aura_mock_db';
 const VERSION_KEY = `${NAMESPACE}:__schema_version`;
 
 /** Bump to wipe all persisted mock data on the next load (schema migration). */
-const SCHEMA_VERSION = 4;
+const SCHEMA_VERSION = 5;
 
 function hasWindow(): boolean {
   return typeof window !== 'undefined' && !!window.localStorage;

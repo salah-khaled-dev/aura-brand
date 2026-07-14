@@ -30,12 +30,7 @@ interface Notification {
   time: string;
 }
 
-const mockNotifications: Notification[] = [
-  { id: '1', category: 'Orders', title: 'طلب جديد #1024', message: 'تم استلام طلب جديد بقيمة 12,500 ج.م', isRead: false, time: 'منذ 5 دقائق' },
-  { id: '2', category: 'Inventory', title: 'مخزون منخفض', message: 'المنتج "فستان سهرة حريري" وصل للحد الأدنى (5)', isRead: false, time: 'منذ 30 دقيقة' },
-  { id: '3', category: 'CRM', title: 'عميل جديد', message: 'سجلت "سارة محمد" حساباً جديداً', isRead: true, time: 'منذ ساعتين' },
-  { id: '4', category: 'System', title: 'تحديث النظام', message: 'تم إكمال النسخ الاحتياطي بنجاح', isRead: true, time: 'منذ 5 ساعات' },
-];
+const mockNotifications: Notification[] = [];
 
 const categoryIcons: Record<NotificationCategory, React.ReactNode> = {
   Orders: <IconShoppingCart size={16} />,

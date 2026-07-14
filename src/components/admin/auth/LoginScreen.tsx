@@ -59,6 +59,10 @@ function errorMessageFor(code: AuthError["code"]): string {
       return t.errors.invalidCredentials;
     case "account_inactive":
       return "هذا الحساب معطّل. تواصل مع مسؤول النظام.";
+    case "not_authorized":
+      return t.errors.notAuthorized;
+    case "email_not_confirmed":
+      return t.errors.emailNotConfirmed;
     case "network":
       return t.errors.network;
     case "session_expired":

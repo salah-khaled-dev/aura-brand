@@ -16,34 +16,7 @@ export interface Banner {
   deviceVisibility: ('desktop' | 'tablet' | 'mobile')[];
 }
 
-let mockBanners: Banner[] = [
-  {
-    id: 'bn-1',
-    type: 'desktop',
-    status: 'active',
-    priority: 1,
-    targetUrl: '/collections/summer',
-    overlayOpacity: 20,
-    animation: 'fade-in',
-    buttonText: 'Shop Summer',
-    mediaUrl: 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=1600&h=400&fit=crop',
-    mediaType: 'image',
-    deviceVisibility: ['desktop']
-  },
-  {
-    id: 'bn-2',
-    type: 'announcement',
-    status: 'active',
-    priority: 10,
-    targetUrl: '/shipping-info',
-    overlayOpacity: 0,
-    animation: 'slide-down',
-    mediaUrl: '',
-    mediaType: 'image',
-    buttonText: 'Free shipping on orders over $100',
-    deviceVisibility: ['desktop', 'tablet', 'mobile']
-  }
-];
+let mockBanners: Banner[] = [];
 
 mockBanners = mockStorage.read('storefront.banners', mockBanners);
 const persistBanners = () => mockStorage.write('storefront.banners', mockBanners);
