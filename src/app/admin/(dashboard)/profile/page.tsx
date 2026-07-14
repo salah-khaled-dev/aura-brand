@@ -333,10 +333,6 @@ export default function ProfilePage() {
                 <h3 className="text-xl font-bold text-[var(--admin-text-base)]">{adminAr.profile.tabs.security}</h3>
                 <p className="text-sm text-[var(--admin-text-muted)] mt-1">تحديث كلمة المرور الخاصة بك.</p>
               </div>
-              
-              <div className="bg-[var(--admin-info)]/10 border border-[var(--admin-info)]/20 p-4 rounded-[var(--admin-radius-md)] mb-6">
-                <p className="text-sm text-[var(--admin-info)] font-medium">كلمة المرور الحالية للاختبار (Mock) هي: <strong>password123</strong></p>
-              </div>
 
               <div className="space-y-5">
                 <div>
