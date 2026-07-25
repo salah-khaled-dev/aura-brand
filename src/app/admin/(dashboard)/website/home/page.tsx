@@ -71,8 +71,8 @@ export default function HomepageBuilder() {
   useEffect(() => {
     loadSections();
     import("@/lib/services/product.service").then((mod) => {
-      mod.ProductService.getProducts().then(setRealProducts);
-    });
+      mod.ProductService.getProducts().then(setRealProducts).catch(console.error);
+    }).catch(console.error);
   }, [loadSections]);
 
   // Live-sync with any other Website Manager tab editing the same content.

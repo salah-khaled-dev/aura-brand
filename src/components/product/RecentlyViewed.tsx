@@ -9,7 +9,7 @@ import { useRecentlyViewed } from "@/hooks/useRecentlyViewed";
 
 export default function RecentlyViewed() {
   const { viewedIds } = useRecentlyViewed();
-  const products = useStorefrontProducts();
+  const { products } = useStorefrontProducts();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {

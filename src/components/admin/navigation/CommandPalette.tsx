@@ -76,9 +76,14 @@ export function CommandPalette() {
     const timer = setTimeout(async () => {
       if (query.trim().length >= 2) {
         setLoading(true);
-        const res = await SearchService.globalSearch(query);
-        setResults(res);
-        setLoading(false);
+        try {
+          const res = await SearchService.globalSearch(query);
+          setResults(res);
+        } catch {
+          setResults(null);
+        } finally {
+          setLoading(false);
+        }
       } else {
         setResults(null);
       }

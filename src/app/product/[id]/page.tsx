@@ -1,10 +1,12 @@
 import { Metadata } from "next";
 import { Suspense } from "react";
-import { getPublishedProductById } from "@/lib/catalog/storefront-catalog";
+import { getPublishedProductById } from "@/lib/services/storefront/storefront-product.service";
+import { ReviewService } from "@/lib/services/review.service";
 import { primaryImage, resolveStockStatus } from "@/data/mock/products";
 import ProductDetailClient from "@/components/product/ProductDetailClient";
 import { ProductDetailSkeleton } from "@/components/ui/Skeleton";
 import { notFound } from "next/navigation";
+import { SITE_URL } from "@/lib/constants/site";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -12,7 +14,7 @@ interface PageProps {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const resolvedParams = await params;
-  const product = getPublishedProductById(resolvedParams.id);
+  const product = await getPublishedProductById(resolvedParams.id);
 
   if (!product) {
     return {
@@ -27,7 +29,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     openGraph: {
       title: `${product.name} | AURA`,
       description: product.description.substring(0, 160),
-      url: `https://aura-fashion-virid.vercel.app/product/${product.id}`,
+      url: `${SITE_URL}/product/${product.id}`,
       siteName: "AURA",
       images: [
         {
@@ -46,18 +48,30 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       images: [primaryImage(product)],
     },
     alternates: {
-      canonical: `https://aura-fashion-virid.vercel.app/product/${product.id}`,
+      canonical: `${SITE_URL}/product/${product.id}`,
     },
   };
 }
 
 export default async function ProductPage({ params }: PageProps) {
   const resolvedParams = await params;
-  const product = getPublishedProductById(resolvedParams.id);
+  const product = await getPublishedProductById(resolvedParams.id);
 
   if (!product) {
     return notFound();
   }
+
+  // Real aggregate rating from approved reviews only — omitted entirely when
+  // there are none, since Google's structured-data guidelines forbid
+  // publishing an aggregateRating that isn't backed by actual review data.
+  const approvedReviews = await ReviewService.getReviews({ status: 'approved', productId: product.id }).catch(() => []);
+  const aggregateRating = approvedReviews.length > 0
+    ? {
+        "@type": "AggregateRating",
+        "ratingValue": (approvedReviews.reduce((sum, r) => sum + r.rating, 0) / approvedReviews.length).toFixed(1),
+        "reviewCount": String(approvedReviews.length),
+      }
+    : undefined;
 
   // Create JSON-LD product schema
   const productSchema = {
@@ -76,7 +90,7 @@ export default async function ProductPage({ params }: PageProps) {
     },
     "offers": {
       "@type": "Offer",
-      "url": `https://aura-fashion-virid.vercel.app/product/${product.id}`,
+      "url": `${SITE_URL}/product/${product.id}`,
       "priceCurrency": "EGP",
       "price": product.price,
       "availability":
@@ -85,11 +99,7 @@ export default async function ProductPage({ params }: PageProps) {
           : "https://schema.org/InStock",
       "itemCondition": "https://schema.org/NewCondition"
     },
-    "aggregateRating": {
-      "@type": "AggregateRating",
-      "ratingValue": "4.9",
-      "reviewCount": "24"
-    }
+    ...(aggregateRating ? { aggregateRating } : {}),
   };
 
   const breadcrumbSchema = {
@@ -100,19 +110,19 @@ export default async function ProductPage({ params }: PageProps) {
         "@type": "ListItem",
         "position": 1,
         "name": "الرئيسية",
-        "item": "https://aura-fashion-virid.vercel.app/"
+        "item": `${SITE_URL}/`
       },
       {
         "@type": "ListItem",
         "position": 2,
         "name": "المتجر",
-        "item": "https://aura-fashion-virid.vercel.app/shop"
+        "item": `${SITE_URL}/shop`
       },
       {
         "@type": "ListItem",
         "position": 3,
         "name": product.name,
-        "item": `https://aura-fashion-virid.vercel.app/product/${product.id}`
+        "item": `${SITE_URL}/product/${product.id}`
       }
     ]
   };

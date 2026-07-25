@@ -11,7 +11,7 @@ interface CompleteTheLookProps {
 }
 
 export default function CompleteTheLook({ currentProduct }: CompleteTheLookProps) {
-  const products = useStorefrontProducts();
+  const { products } = useStorefrontProducts();
   // Logic to determine matching categories based on current product collection
   const getMatchingCategories = () => {
     const col = currentProduct.collection || "";

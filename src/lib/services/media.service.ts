@@ -1,4 +1,7 @@
-import { Media, mockMedia, updateMockMedia } from '@/data/mock/media';
+import type { Media } from '@/data/mock/media';
+import { createClient } from '@/lib/supabase/client';
+import type { Tables, TablesInsert, TablesUpdate } from '@/lib/supabase/database.types';
+import { uploadImageFile } from '@/lib/utils/image-file';
 
 export interface MediaFilters {
   search?: string;
@@ -6,103 +9,150 @@ export interface MediaFilters {
   type?: string;
 }
 
+const BUCKET = 'media';
+const supabase = createClient();
+
+function rowToMedia(row: Tables<'media'>): Media {
+  return {
+    id: row.id,
+    fileName: row.file_name,
+    originalName: row.original_name,
+    alt: row.alt,
+    mimeType: row.mime_type,
+    width: row.width ?? 0,
+    height: row.height ?? 0,
+    size: row.size_bytes,
+    folder: row.folder,
+    url: row.url,
+    thumbnail: row.thumbnail_url ?? row.url,
+    uploadedAt: row.created_at,
+    uploadedBy: row.uploaded_by ?? 'Admin',
+    usedIn: row.used_in,
+    tags: row.tags,
+  };
+}
+
 export const MediaService = {
   async getMedia(filters?: MediaFilters): Promise<Media[]> {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        let filtered = [...mockMedia];
-        
-        if (filters) {
-          if (filters.search) {
-            const query = filters.search.toLowerCase();
-            filtered = filtered.filter(m => 
-              m.originalName.toLowerCase().includes(query) || 
-              m.alt.toLowerCase().includes(query) ||
-              m.tags.some(t => t.toLowerCase().includes(query))
-            );
-          }
-          if (filters.folder && filters.folder !== 'all') {
-            filtered = filtered.filter(m => m.folder === filters.folder);
-          }
-          if (filters.type && filters.type !== 'all') {
-            filtered = filtered.filter(m => m.mimeType.includes(filters.type!));
-          }
-        }
-        
-        // Sort newest first
-        filtered.sort((a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime());
-        
-        resolve(filtered);
-      }, 400);
-    });
+    let query = supabase.from('media').select('*').order('created_at', { ascending: false });
+    if (filters?.folder && filters.folder !== 'all') query = query.eq('folder', filters.folder);
+    if (filters?.type && filters.type !== 'all') query = query.ilike('mime_type', `%${filters.type}%`);
+
+    const { data, error } = await query;
+    if (error) throw new Error(error.message);
+
+    let items = (data ?? []).map(rowToMedia);
+    if (filters?.search) {
+      const q = filters.search.toLowerCase();
+      items = items.filter(m =>
+        m.originalName.toLowerCase().includes(q) ||
+        m.alt.toLowerCase().includes(q) ||
+        m.tags.some(t => t.toLowerCase().includes(q))
+      );
+    }
+    return items;
   },
 
-  async uploadMedia(fileMock: Partial<Media>): Promise<Media> {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const newMedia: Media = {
-          id: `media_${Date.now()}`,
-          fileName: fileMock.fileName || `upload_${Date.now()}.jpg`,
-          originalName: fileMock.originalName || 'uploaded_file.jpg',
-          alt: fileMock.alt || '',
-          mimeType: fileMock.mimeType || 'image/jpeg',
-          width: fileMock.width || 1080,
-          height: fileMock.height || 1080,
-          size: fileMock.size || Math.floor(Math.random() * 2000000) + 100000,
-          folder: fileMock.folder || 'uncategorized',
-          url: fileMock.url || 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=1080&q=80',
-          thumbnail: fileMock.thumbnail || 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=200&q=80',
-          uploadedAt: new Date().toISOString(),
-          uploadedBy: 'Admin',
-          usedIn: [],
-          tags: fileMock.tags || []
-        };
-        
-        updateMockMedia([newMedia, ...mockMedia]);
-        resolve(newMedia);
-      }, 800); // Simulate upload delay
-    });
+  /**
+   * Uploads `file` to Supabase Storage and records it in the `media` table.
+   * `uploadImageFile` converts the file to WebP first (see image-file.ts), so `file_name`,
+   * `mime_type`, `size_bytes`, and the dimensions here all describe the *stored* WebP object,
+   * not the original picked file — `original_name` is the only field that keeps the source name.
+   */
+  async uploadMedia(file: File, meta?: { alt?: string; folder?: string; tags?: string[] }): Promise<Media> {
+    const folder = meta?.folder || 'uncategorized';
+    const { path, publicUrl, fileName, mimeType, width, height, sizeBytes } = await uploadImageFile(file, BUCKET, folder);
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    const insertRow: TablesInsert<'media'> = {
+      file_name: fileName,
+      original_name: file.name,
+      alt: meta?.alt || file.name,
+      mime_type: mimeType,
+      size_bytes: sizeBytes,
+      width,
+      height,
+      folder,
+      bucket_id: BUCKET,
+      storage_path: path,
+      url: publicUrl,
+      thumbnail_url: publicUrl,
+      uploaded_by: user?.id ?? null,
+      tags: meta?.tags ?? [],
+    };
+
+    const { data: row, error } = await supabase.from('media').insert(insertRow).select('*').single();
+    if (error) {
+      // Roll back the uploaded object so it doesn't become an orphaned file.
+      await supabase.storage.from(BUCKET).remove([path]);
+      throw new Error(error.message);
+    }
+    return rowToMedia(row);
   },
 
   async updateMedia(id: string, data: Partial<Media>): Promise<Media> {
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        const index = mockMedia.findIndex(m => m.id === id);
-        if (index === -1) return reject(new Error('Media not found'));
-        
-        const updated = { ...mockMedia[index], ...data };
-        const newArray = [...mockMedia];
-        newArray[index] = updated;
-        updateMockMedia(newArray);
-        resolve(updated);
-      }, 300);
-    });
+    const update: TablesUpdate<'media'> = {};
+    if (data.alt !== undefined) update.alt = data.alt;
+    if (data.folder !== undefined) update.folder = data.folder;
+    if (data.tags !== undefined) update.tags = data.tags;
+    if (data.usedIn !== undefined) update.used_in = data.usedIn;
+
+    const { data: row, error } = await supabase.from('media').update(update).eq('id', id).select('*').single();
+    if (error) {
+      if (error.code === 'PGRST116') throw new Error('Media not found');
+      throw new Error(error.message);
+    }
+    return rowToMedia(row);
   },
 
   async deleteMedia(id: string): Promise<void> {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        updateMockMedia(mockMedia.filter(m => m.id !== id));
-        resolve();
-      }, 400);
-    });
+    const { data: row, error: fetchError } = await supabase
+      .from('media')
+      .select('bucket_id, storage_path')
+      .eq('id', id)
+      .maybeSingle();
+    if (fetchError) throw new Error(fetchError.message);
+
+    const { error } = await supabase.from('media').delete().eq('id', id);
+    if (error) throw new Error(error.message);
+
+    if (row) await supabase.storage.from(row.bucket_id).remove([row.storage_path]);
   },
 
   async deleteMultiple(ids: string[]): Promise<void> {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        updateMockMedia(mockMedia.filter(m => !ids.includes(m.id)));
-        resolve();
-      }, 500);
-    });
+    const { data: rows, error: fetchError } = await supabase
+      .from('media')
+      .select('bucket_id, storage_path')
+      .in('id', ids);
+    if (fetchError) throw new Error(fetchError.message);
+
+    const { error } = await supabase.from('media').delete().in('id', ids);
+    if (error) throw new Error(error.message);
+
+    const byBucket = new Map<string, string[]>();
+    for (const row of rows ?? []) {
+      byBucket.set(row.bucket_id, [...(byBucket.get(row.bucket_id) ?? []), row.storage_path]);
+    }
+    await Promise.all(
+      Array.from(byBucket.entries()).map(([bucket, paths]) => supabase.storage.from(bucket).remove(paths))
+    );
   },
-  
+
+  async existsByName(originalName: string): Promise<boolean> {
+    const { count, error } = await supabase
+      .from('media')
+      .select('id', { count: 'exact', head: true })
+      .eq('original_name', originalName);
+    if (error) throw new Error(error.message);
+    return (count ?? 0) > 0;
+  },
+
   async getFolders(): Promise<string[]> {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const folders = Array.from(new Set(mockMedia.map(m => m.folder)));
-        resolve(folders);
-      }, 200);
-    });
-  }
+    const { data, error } = await supabase.from('media').select('folder');
+    if (error) throw new Error(error.message);
+    return Array.from(new Set((data ?? []).map(r => r.folder)));
+  },
 };

@@ -64,50 +64,50 @@ export default function BusinessDashboardPage() {
           title={t.revenue}
           value={formatCurrency(summary.totalRevenue)}
           icon={<IconTrendingUp />}
-          accentColor="success"
-          trend={{ value: 12, label: "مقارنة بالشهر الماضي", isPositive: true }}
+          accentColor="emerald"
+          trend={{ value: 0, label: "الشهر الحالي", isPositive: true }}
         />
         <KpiCard
           title={t.cogs}
           value={formatCurrency(summary.totalCOGS)}
           icon={<IconPackage />}
-          accentColor="warning"
-          trend={{ value: 5, label: "مقارنة بالشهر الماضي", isPositive: false }}
+          accentColor="yellow"
+          trend={{ value: 0, label: "الشهر الحالي", isPositive: false }}
         />
         <KpiCard
           title={t.expenses}
           value={formatCurrency(summary.totalExpenses)}
           icon={<IconReceipt />}
-          accentColor="danger"
-          trend={{ value: 2, label: "مقارنة بالشهر الماضي", isPositive: true }}
+          accentColor="pink"
+          trend={{ value: 0, label: "الشهر الحالي", isPositive: false }}
         />
         <KpiCard
           title={t.netProfit}
           value={formatCurrency(summary.netProfit)}
           icon={<IconCurrencyDollar />}
           accentColor="primary"
-          trend={{ value: 18, label: "مقارنة بالشهر الماضي", isPositive: true }}
+          trend={{ value: 0, label: "الشهر الحالي", isPositive: (summary.netProfit ?? 0) >= 0 }}
         />
         <KpiCard
           title={t.cashFlow}
           value={formatCurrency(summary.cashFlow)}
           icon={<IconWallet />}
-          accentColor="info"
-          trend={{ value: 8, label: "مقارنة بالشهر الماضي", isPositive: true }}
+          accentColor="blue"
+          trend={{ value: 0, label: "الشهر الحالي", isPositive: (summary.cashFlow ?? 0) >= 0 }}
         />
         <KpiCard
           title={t.assets}
           value={formatCurrency(summary.totalAssets)}
           icon={<IconBuildingSkyscraper />}
           accentColor="indigo"
-          trend={{ value: 1, label: "مقارنة بالشهر الماضي", isPositive: true }}
+          trend={{ value: 0, label: "الرصيد الحالي", isPositive: true }}
         />
         <KpiCard
           title={t.liabilities}
           value={formatCurrency(summary.totalLiabilities)}
           icon={<IconFileText />}
-          accentColor="danger"
-          trend={{ value: 5, label: "مقارنة بالشهر الماضي", isPositive: true }}
+          accentColor="pink"
+          trend={{ value: 0, label: "الرصيد الحالي", isPositive: false }}
         />
         <KpiCard
           title={t.capital}

@@ -1,5 +1,11 @@
 # Storefront CMS Architecture (Phase 7)
 
+> **Note (2026-07-15):** This doc predates the Supabase migration. Auth is
+> now real Supabase Auth. Storefront CMS services described below are still
+> mock/localStorage-backed as of this note — see
+> [`docs/migration/mock-to-supabase-audit.md`](migration/mock-to-supabase-audit.md)
+> (Settings section, Phase C) for current status.
+
 ## Overview
 The AURA Storefront CMS provides the admin with full control over the storefront's content, layout, navigation, and settings, without requiring source code modifications. This adheres to our "Mock-First Architecture," where data is managed purely via the Service Layer.
 

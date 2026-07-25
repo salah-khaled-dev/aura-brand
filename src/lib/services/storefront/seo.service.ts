@@ -1,5 +1,6 @@
+import { createClient } from '@/lib/supabase/client';
+import type { Tables, TablesInsert } from '@/lib/supabase/database.types';
 import { eventBus } from '@/lib/events/EventBus';
-import { mockStorage } from '@/lib/storage/mock-storage';
 
 export type SEOPage =
   | 'global' | 'homepage' | 'shop' | 'about'
@@ -19,184 +20,70 @@ export interface SEOSettings {
   jsonLd: boolean;
 }
 
-const DEFAULT_SEO: SEOSettings[] = [
-  {
-    id: 'seo-global',
-    page: 'global',
-    title: 'AURA | دار الأزياء المصرية الراقية',
-    description: 'أورا - دار أزياء نسائية مصرية فاخرة تقدم مفهومًا متطورًا للأناقة والأنوثة العصرية بأيدي حرفية متقنة وتفاصيل فريدة.',
-    keywords: 'AURA, أورا, أزياء نسائية, كوتور, ملابس فاخرة, أزياء مصرية',
-    ogImage: '/aura_thumbnail.png',
-    twitterCard: 'summary_large_image',
-    robots: 'index, follow',
-    jsonLd: true,
-  },
-  {
-    id: 'seo-homepage',
-    page: 'homepage',
-    title: 'AURA | الصفحة الرئيسية — تشكيلات الكوتور',
-    description: 'اكتشفي أحدث تشكيلات دار أورا من الفساتين الراقية والأزياء الكوتور المصنوعة يدوياً.',
-    keywords: 'أورا, تشكيلة, كوتور, فساتين فاخرة',
-    ogImage: '/aura_thumbnail.png',
-    twitterCard: 'summary_large_image',
-    robots: 'index, follow',
-    jsonLd: true,
-  },
-  {
-    id: 'seo-shop',
-    page: 'shop',
-    title: 'متجر أورا | أزياء نسائية فاخرة',
-    description: 'تسوقي أحدث تصاميم دار أورا من فساتين ومجموعات راقية مصنوعة من أجود الأقمشة الطبيعية.',
-    keywords: 'متجر أورا, فساتين, أزياء نسائية فاخرة, كوتور',
-    ogImage: '/aura_thumbnail.png',
-    twitterCard: 'summary_large_image',
-    robots: 'index, follow',
-    jsonLd: true,
-  },
-  {
-    id: 'seo-about',
-    page: 'about',
-    title: 'الأتيليه | قصة دار أورا الفنية',
-    description: 'تعرفي على قصة دار أورا وحرفية صنع الأزياء الراقية المستوحاة من الجمال المصري العريق.',
-    keywords: 'أتيليه أورا, قصة, حرفية, دار أزياء مصرية',
-    ogImage: '/aura_thumbnail.png',
-    twitterCard: 'summary_large_image',
-    robots: 'index, follow',
-    jsonLd: true,
-  },
-  {
-    id: 'seo-winter',
-    page: 'winter',
-    title: 'أزياء الشتاء | دار أورا',
-    description: 'تشكيلة شتوية حصرية من دار أورا — خامات كشمير وصوف فاخر لأناقة دافئة.',
-    keywords: 'أزياء شتاء, كشمير, دار أورا',
-    ogImage: '/aura_thumbnail.png',
-    twitterCard: 'summary_large_image',
-    robots: 'index, follow',
-    jsonLd: true,
-  },
-  {
-    id: 'seo-summer',
-    page: 'summer',
-    title: 'أزياء الصيف | دار أورا',
-    description: 'تشكيلة صيفية من دار أورا — كتان طبيعي بلجيكي وحرير إيطالي لأناقة منعشة.',
-    keywords: 'أزياء صيف, كتان, حرير, دار أورا',
-    ogImage: '/aura_thumbnail.png',
-    twitterCard: 'summary_large_image',
-    robots: 'index, follow',
-    jsonLd: true,
-  },
-  {
-    id: 'seo-contact',
-    page: 'contact',
-    title: 'تواصل معنا | دار أورا',
-    description: 'تواصلي مع فريق دار أورا لأي استفسار عن المنتجات أو المقاسات أو الطلبات الخاصة.',
-    keywords: 'تواصل, أورا, دعم, استفسار',
-    ogImage: '/aura_thumbnail.png',
-    twitterCard: 'summary',
-    robots: 'index, follow',
-    jsonLd: false,
-  },
-  {
-    id: 'seo-tracking',
-    page: 'tracking',
-    title: 'تتبع طلبكِ | أورا',
-    description: 'تتبعي حالة شحنتك من دار أورا بإدخال رقم الطلب.',
-    keywords: 'تتبع, طلب, شحن, أورا',
-    ogImage: '/aura_thumbnail.png',
-    twitterCard: 'summary',
-    robots: 'noindex, nofollow',
-    jsonLd: false,
-  },
-  {
-    id: 'seo-reviews',
-    page: 'reviews',
-    title: 'آراء العملاء | دار أورا',
-    description: 'اقرئي آراء وتجارب عميلات دار أورا مع تصاميم الكوتور الراقية.',
-    keywords: 'آراء, تقييمات, عملاء, أورا',
-    ogImage: '/aura_thumbnail.png',
-    twitterCard: 'summary_large_image',
-    robots: 'index, follow',
-    jsonLd: true,
-  },
-  {
-    id: 'seo-journal',
-    page: 'journal',
-    title: 'مجلة أورا | الموضة والأناقة',
-    description: 'اكتشفي مقالات أورا عن الموضة المعاصرة والأناقة الهادئة والحرفية الراقية.',
-    keywords: 'مجلة, موضة, أناقة, أورا',
-    ogImage: '/aura_thumbnail.png',
-    twitterCard: 'summary_large_image',
-    robots: 'index, follow',
-    jsonLd: true,
-  },
-];
+type SEORow = Tables<'seo_settings'>;
 
-let mockSEO: SEOSettings[] = [...DEFAULT_SEO];
-mockSEO = mockStorage.read('storefront.seo', mockSEO);
+const supabase = createClient();
 
-// Backfill any pages added after the first save
-for (const def of DEFAULT_SEO) {
-  if (!mockSEO.find(s => s.page === def.page)) {
-    mockSEO.push({ ...def });
-  }
+function rowToSEO(row: SEORow): SEOSettings {
+  return {
+    id: `seo-${row.page}`,
+    page: row.page as SEOPage,
+    title: row.title,
+    description: row.description,
+    keywords: row.keywords,
+    ogImage: row.og_image,
+    twitterCard: row.twitter_card as SEOSettings['twitterCard'],
+    canonical: row.canonical ?? undefined,
+    robots: row.robots,
+    jsonLd: row.json_ld,
+  };
 }
 
-const persistSEO = () => mockStorage.write('storefront.seo', mockSEO);
-
+/**
+ * Admin CRUD over `public.seo_settings`. This is READ server-side by
+ * generateMetadata() (see src/utils/seo-helper.ts) — that's the only read
+ * path that actually reaches search engines/social crawlers. This service is
+ * for the admin panel only.
+ */
 export const SEOService = {
   async getAll(): Promise<SEOSettings[]> {
-    return [...mockSEO];
+    const { data, error } = await supabase.from('seo_settings').select('*').order('page');
+    if (error) throw error;
+    return (data ?? []).map(rowToSEO);
   },
 
   async getByPage(page: SEOPage): Promise<SEOSettings | undefined> {
-    return mockSEO.find(s => s.page === page);
+    const { data, error } = await supabase.from('seo_settings').select('*').eq('page', page).maybeSingle();
+    if (error) throw error;
+    return data ? rowToSEO(data) : undefined;
   },
 
   async update(id: string, updates: Partial<SEOSettings>): Promise<SEOSettings> {
-    const idx = mockSEO.findIndex(s => s.id === id);
-    if (idx > -1) {
-      mockSEO[idx] = { ...mockSEO[idx], ...updates };
-      persistSEO();
-      eventBus.emit('website.changed', { area: 'seo' });
-      return mockSEO[idx];
-    }
-    const newSettings: SEOSettings = { id, ...updates } as SEOSettings;
-    mockSEO.push(newSettings);
-    persistSEO();
-    eventBus.emit('website.changed', { area: 'seo' });
-    return newSettings;
+    const page = id.replace(/^seo-/, '');
+    return this.upsert(page as SEOPage, updates);
   },
 
   async upsert(page: SEOPage, updates: Partial<SEOSettings>): Promise<SEOSettings> {
-    const idx = mockSEO.findIndex(s => s.page === page);
-    if (idx > -1) {
-      mockSEO[idx] = { ...mockSEO[idx], ...updates };
-      persistSEO();
-      eventBus.emit('website.changed', { area: 'seo' });
-      return mockSEO[idx];
-    }
-    const newEntry: SEOSettings = {
-      id: `seo-${page}`,
-      page,
-      title: '',
-      description: '',
-      keywords: '',
-      ogImage: '',
-      twitterCard: 'summary_large_image',
-      robots: 'index, follow',
-      jsonLd: false,
-      ...updates,
-    };
-    mockSEO.push(newEntry);
-    persistSEO();
+    const patch: TablesInsert<'seo_settings'> = { page };
+    if (updates.title !== undefined) patch.title = updates.title;
+    if (updates.description !== undefined) patch.description = updates.description;
+    if (updates.keywords !== undefined) patch.keywords = updates.keywords;
+    if (updates.ogImage !== undefined) patch.og_image = updates.ogImage;
+    if (updates.twitterCard !== undefined) patch.twitter_card = updates.twitterCard;
+    if (updates.canonical !== undefined) patch.canonical = updates.canonical;
+    if (updates.robots !== undefined) patch.robots = updates.robots;
+    if (updates.jsonLd !== undefined) patch.json_ld = updates.jsonLd;
+
+    const { data, error } = await supabase.from('seo_settings').upsert(patch, { onConflict: 'page' }).select().single();
+    if (error) throw error;
     eventBus.emit('website.changed', { area: 'seo' });
-    return newEntry;
+    return rowToSEO(data);
   },
 
   async getSEOScore(): Promise<{ score: number; brokenLinks: number }> {
-    const filled = mockSEO.filter(s => s.title && s.description && s.ogImage).length;
-    const score = Math.round((filled / mockSEO.length) * 100);
-    return { score, brokenLinks: 0 };
+    const all = await this.getAll();
+    if (all.length === 0) return { score: 0, brokenLinks: 0 };
+    const filled = all.filter((s) => s.title && s.description && s.ogImage).length;
+    return { score: Math.round((filled / all.length) * 100), brokenLinks: 0 };
   },
 };

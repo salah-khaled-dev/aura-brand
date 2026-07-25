@@ -21,46 +21,6 @@ function AnimatedCounter({ value }: { value: string | number }) {
   );
 }
 
-// A simple mock sparkline for visual flair
-function MiniSparkline({ color }: { color: IconColor }) {
-  const points = Array.from({ length: 8 }, () => Math.random() * 10 + 2);
-  const max = Math.max(...points);
-  
-  const path = points.map((p, i) => {
-    const x = (i / (points.length - 1)) * 40;
-    const y = 16 - (p / max) * 16;
-    return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
-  }).join(' ');
-
-  return (
-    <svg width="40" height="16" viewBox="0 0 40 16" className="overflow-visible">
-      <motion.path
-        d={path}
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        initial={{ pathLength: 0, opacity: 0 }}
-        animate={{ pathLength: 1, opacity: 1 }}
-        transition={{ duration: 1, ease: "easeOut", delay: 0.2 }}
-        className={cn(
-          color === 'purple' && "text-purple-500",
-          color === 'blue' && "text-blue-500",
-          color === 'emerald' && "text-emerald-500",
-          color === 'cyan' && "text-cyan-500",
-          color === 'orange' && "text-orange-500",
-          color === 'yellow' && "text-yellow-500",
-          color === 'pink' && "text-pink-500",
-          color === 'indigo' && "text-indigo-500",
-          color === 'primary' && "text-[var(--admin-primary)]",
-          !['purple', 'blue', 'emerald', 'cyan', 'orange', 'yellow', 'pink', 'indigo', 'primary'].includes(color) && "text-[var(--admin-primary)]"
-        )}
-      />
-    </svg>
-  );
-}
-
 export interface KpiCardProps {
   title: string;
   value: string | number;
@@ -136,7 +96,6 @@ export function KpiCard({ title, value, icon, trend, className, accentColor = "p
                 : <IconTrendingDown size={14} stroke={2.5} />}
               {trend.value}%
             </div>
-            <MiniSparkline color={accentColor} />
           </div>
         )}
       </div>

@@ -1,5 +1,6 @@
+import { createClient } from '@/lib/supabase/client';
+import type { Tables, TablesUpdate, Json } from '@/lib/supabase/database.types';
 import { eventBus } from '@/lib/events/EventBus';
-import { mockStorage } from '@/lib/storage/mock-storage';
 
 export interface FooterColumn {
   id: string;
@@ -19,61 +20,44 @@ export interface FooterSettings {
   columns: FooterColumn[];
 }
 
-// Real AURA footer — mirrors src/components/layout/Footer.tsx navData
-let mockFooter: FooterSettings = {
-  showNewsletter: true,
-  newsletterTitle: 'صالون أورا البريدي',
-  newsletterSubtitle: 'دعوات خاصة وتحديثات الأتيلييه',
-  showSocialIcons: true,
-  showPaymentIcons: false,
-  developerCredit: 'صلاح خالد',
-  copyrightText: '© ٢٠٢٦ دار أورا للأزياء الراقية',
-  columns: [
-    {
-      id: 'col-shop',
-      title: 'المتجر',
-      order: 0,
-      links: [
-        { id: 'l-s1', label: 'كل المنتجات',       url: '/shop' },
-        { id: 'l-s2', label: 'أزياء الشتاء',      url: '/shop?category=winter' },
-        { id: 'l-s3', label: 'أزياء الصيف',       url: '/shop?category=summer' },
-      ]
-    },
-    {
-      id: 'col-brand',
-      title: 'دار أورا',
-      order: 1,
-      links: [
-        { id: 'l-b1', label: 'قصتنا وحرفيتنا', url: '/about' },
-        { id: 'l-b2', label: 'تتبع طلبكِ',     url: '/tracking' },
-        { id: 'l-b3', label: 'تواصلي معنا',    url: '/contact' },
-      ]
-    },
-    {
-      id: 'col-service',
-      title: 'خدمتكِ',
-      order: 2,
-      links: [
-        { id: 'l-sv1', label: 'الشحن والتوصيل',    url: '/shipping' },
-        { id: 'l-sv2', label: 'الاستبدال والإرجاع', url: '/returns' },
-        { id: 'l-sv3', label: 'الشروط والأحكام',   url: '/terms' },
-        { id: 'l-sv4', label: 'سياسة الخصوصية',   url: '/privacy' },
-      ]
-    }
-  ]
-};
+type FooterRow = Tables<'footer_settings'>;
 
-mockFooter = mockStorage.read('storefront.footer', mockFooter);
+const supabase = createClient();
+
+function rowToFooter(row: FooterRow): FooterSettings {
+  return {
+    showNewsletter: row.show_newsletter,
+    newsletterTitle: row.newsletter_title,
+    newsletterSubtitle: row.newsletter_subtitle,
+    showSocialIcons: row.show_social_icons,
+    showPaymentIcons: row.show_payment_icons,
+    developerCredit: row.developer_credit,
+    copyrightText: row.copyright_text,
+    columns: (row.columns as unknown as FooterColumn[]) ?? [],
+  };
+}
 
 export const FooterService = {
   async getSettings(): Promise<FooterSettings> {
-    return { ...mockFooter };
+    const { data, error } = await supabase.from('footer_settings').select('*').eq('id', 1).single();
+    if (error) throw error;
+    return rowToFooter(data);
   },
 
   async updateSettings(updates: Partial<FooterSettings>): Promise<FooterSettings> {
-    mockFooter = { ...mockFooter, ...updates };
-    mockStorage.write('storefront.footer', mockFooter);
+    const patch: TablesUpdate<'footer_settings'> = {};
+    if (updates.showNewsletter !== undefined) patch.show_newsletter = updates.showNewsletter;
+    if (updates.newsletterTitle !== undefined) patch.newsletter_title = updates.newsletterTitle;
+    if (updates.newsletterSubtitle !== undefined) patch.newsletter_subtitle = updates.newsletterSubtitle;
+    if (updates.showSocialIcons !== undefined) patch.show_social_icons = updates.showSocialIcons;
+    if (updates.showPaymentIcons !== undefined) patch.show_payment_icons = updates.showPaymentIcons;
+    if (updates.developerCredit !== undefined) patch.developer_credit = updates.developerCredit;
+    if (updates.copyrightText !== undefined) patch.copyright_text = updates.copyrightText;
+    if (updates.columns !== undefined) patch.columns = updates.columns as unknown as Json;
+
+    const { data, error } = await supabase.from('footer_settings').update(patch).eq('id', 1).select().single();
+    if (error) throw error;
     eventBus.emit('website.changed', { area: 'footer' });
-    return { ...mockFooter };
-  }
+    return rowToFooter(data);
+  },
 };

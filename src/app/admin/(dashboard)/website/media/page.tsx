@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { MediaService } from '@/lib/services/media.service';
 import { Media } from '@/data/mock/media';
 import { toast } from 'sonner';
 import { formatDate } from '@/lib/utils/formatters';
 import { motion, AnimatePresence } from 'framer-motion';
+import { validateImageFile } from '@/lib/utils/image-file';
 
 // SaaS UI Components
 import { PageHeader, EmptyState, Skeleton } from '@/components/admin/design-system/Layout';
@@ -30,7 +31,9 @@ export default function MediaLibraryPage() {
   const [mediaItems, setMediaItems] = useState<Media[]>([]);
   const [folders, setFolders] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [filters, setFilters] = useState({
     search: '',
@@ -89,24 +92,44 @@ export default function MediaLibraryPage() {
     }
   };
 
-  const handleUploadMock = async () => {
-    const mockFile: Partial<Media> = {
-      fileName: `mock_upload_${Date.now()}.jpg`,
-      originalName: 'new_image_from_library.jpg',
-      alt: 'صورة مرفوعة',
-      mimeType: 'image/jpeg',
-      folder: filters.folder !== 'all' ? filters.folder : 'uncategorized',
-    };
+  const handleUploadClick = () => {
+    if (uploading) return;
+    fileInputRef.current?.click();
+  };
 
-    setLoading(true);
+  const handleFilesSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    e.target.value = ''; // allow re-selecting the same file again later
+    if (files.length === 0 || uploading) return;
+
+    setUploading(true);
+    let successCount = 0;
     try {
-      await MediaService.uploadMedia(mockFile);
-      toast.success('تم رفع الملف (محاكاة)');
-      loadMedia();
-      loadFolders();
+      for (const file of files) {
+        const validationError = validateImageFile(file);
+        if (validationError) {
+          toast.error(validationError);
+          continue;
+        }
+        if (await MediaService.existsByName(file.name)) {
+          toast.warning(`تم تجاهل "${file.name}" لوجود ملف بنفس الاسم مسبقًا`);
+          continue;
+        }
+        await MediaService.uploadMedia(file, {
+          alt: file.name,
+          folder: filters.folder !== 'all' ? filters.folder : 'uncategorized',
+        });
+        successCount++;
+      }
+      if (successCount > 0) {
+        toast.success(successCount === 1 ? 'تم رفع الملف بنجاح' : `تم رفع ${successCount} ملفات بنجاح`);
+        loadMedia();
+        loadFolders();
+      }
     } catch {
       toast.error('حدث خطأ أثناء الرفع');
-      setLoading(false);
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -127,9 +150,19 @@ export default function MediaLibraryPage() {
         title="مكتبة الوسائط"
         description="الإدارة المركزية للصور والملفات (Media Library)."
         actions={
-          <Button leftIcon={<IconUpload size={18} />} onClick={handleUploadMock}>
-            رفع جديد
-          </Button>
+          <>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={handleFilesSelected}
+            />
+            <Button leftIcon={<IconUpload size={18} />} onClick={handleUploadClick} isLoading={uploading}>
+              رفع جديد
+            </Button>
+          </>
         }
       />
 

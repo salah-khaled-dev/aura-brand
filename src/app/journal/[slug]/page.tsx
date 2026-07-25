@@ -3,8 +3,9 @@ import { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { mockArticles } from "@/data/journal";
+import { StorefrontJournalService } from "@/lib/services/storefront/storefront-journal.service";
 import DOMPurify from "isomorphic-dompurify";
+import { SITE_URL } from "@/lib/constants/site";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -12,7 +13,7 @@ interface PageProps {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const resolvedParams = await params;
-  const article = mockArticles.find((a) => a.slug === resolvedParams.slug);
+  const article = await StorefrontJournalService.getPublishedArticleBySlug(resolvedParams.slug);
 
   if (!article) return { title: "مقال غير موجود | AURA Journal" };
 
@@ -20,14 +21,14 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     title: `${article.title} | مجلة AURA`,
     description: article.excerpt,
     alternates: {
-      canonical: `https://aura-fashion-virid.vercel.app/journal/${article.slug}`,
+      canonical: `${SITE_URL}/journal/${article.slug}`,
     },
     openGraph: {
       title: article.title,
       description: article.excerpt,
       type: "article",
       publishedTime: article.isoDate,
-      url: `https://aura-fashion-virid.vercel.app/journal/${article.slug}`,
+      url: `${SITE_URL}/journal/${article.slug}`,
       images: [
         {
           url: article.image,
@@ -49,7 +50,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function ArticlePage({ params }: PageProps) {
   const resolvedParams = await params;
-  const article = mockArticles.find((a) => a.slug === resolvedParams.slug);
+  const article = await StorefrontJournalService.getPublishedArticleBySlug(resolvedParams.slug);
 
   if (!article) notFound();
 
@@ -63,11 +64,12 @@ export default async function ArticlePage({ params }: PageProps) {
     author: [{
       "@type": "Organization",
       "name": "AURA Editorial",
-      "url": "https://aura-fashion-virid.vercel.app"
+      "url": SITE_URL
     }]
   };
 
-  const relatedArticles = mockArticles
+  const allArticles = await StorefrontJournalService.getPublishedArticles();
+  const relatedArticles = allArticles
     .filter((a) => a.category === article.category && a.slug !== article.slug)
     .slice(0, 3);
 

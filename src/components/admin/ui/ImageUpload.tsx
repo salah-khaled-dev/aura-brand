@@ -1,10 +1,13 @@
 "use client";
 
-import React, { useState } from 'react';
-import { adminAr } from '@/lib/i18n/admin-ar';
+import React, { useRef, useState } from 'react';
 import { MediaPicker } from './MediaPicker';
 import { Media } from '@/data/mock/media';
-import { IconPhoto, IconX } from '@tabler/icons-react';
+import { MediaService } from '@/lib/services/media.service';
+import { validateImageFile } from '@/lib/utils/image-file';
+import { toast } from 'sonner';
+import { Button } from '@/components/admin/design-system/Button';
+import { IconPhoto, IconUpload, IconX } from '@tabler/icons-react';
 
 interface ImageUploadProps {
   images: string[];
@@ -14,6 +17,9 @@ interface ImageUploadProps {
 
 export function ImageUpload({ images, onChange, multiple = false }: ImageUploadProps) {
   const [mediaPickerOpen, setMediaPickerOpen] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleMediaSelect = (media: Media | Media[]) => {
     if (Array.isArray(media)) {
@@ -29,6 +35,52 @@ export function ImageUpload({ images, onChange, multiple = false }: ImageUploadP
     }
   };
 
+  const processFiles = async (fileList: FileList | File[]) => {
+    const files = (multiple ? Array.from(fileList) : Array.from(fileList).slice(0, 1));
+    if (files.length === 0 || uploading) return;
+
+    setUploading(true);
+    const uploadedUrls: string[] = [];
+    try {
+      for (const file of files) {
+        const validationError = validateImageFile(file);
+        if (validationError) {
+          toast.error(validationError);
+          continue;
+        }
+        if (await MediaService.existsByName(file.name)) {
+          toast.warning(`تم تجاهل "${file.name}" لوجود ملف بنفس الاسم مسبقًا`);
+          continue;
+        }
+        const media = await MediaService.uploadMedia(file, { alt: file.name, folder: 'uncategorized' });
+        uploadedUrls.push(media.url);
+      }
+
+      if (uploadedUrls.length > 0) {
+        onChange(multiple ? [...images, ...uploadedUrls] : [uploadedUrls[0]]);
+        toast.success(uploadedUrls.length === 1 ? 'تم رفع الصورة بنجاح' : `تم رفع ${uploadedUrls.length} صور بنجاح`);
+      }
+    } catch {
+      toast.error('حدث خطأ أثناء الرفع، تحقق من اتصالك وحاول مرة أخرى');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    e.target.value = ''; // allow re-selecting the same file again later
+    if (files && files.length > 0) processFiles(files);
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      processFiles(e.dataTransfer.files);
+    }
+  };
+
   const removeImage = (index: number) => {
     const newImages = [...images];
     newImages.splice(index, 1);
@@ -37,18 +89,49 @@ export function ImageUpload({ images, onChange, multiple = false }: ImageUploadP
 
   return (
     <div className="space-y-4 w-full">
-      <div 
-        onClick={() => setMediaPickerOpen(true)}
-        className="relative border-2 border-dashed rounded-[var(--admin-radius-lg)] p-8 text-center transition-colors cursor-pointer border-[var(--admin-border-strong)] hover:border-[var(--admin-primary)] bg-[var(--admin-bg-elevated)] hover:bg-[var(--admin-primary-muted)]"
+      <div
+        onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+        onDragLeave={() => setIsDragging(false)}
+        onDrop={handleDrop}
+        className={`relative border-2 border-dashed rounded-[var(--admin-radius-lg)] p-8 text-center transition-colors bg-[var(--admin-bg-elevated)] ${
+          isDragging ? 'border-[var(--admin-primary)] bg-[var(--admin-primary-muted)]' : 'border-[var(--admin-border-strong)]'
+        }`}
       >
-        <div className="flex flex-col items-center justify-center gap-2 pointer-events-none group">
-          <IconPhoto size={36} className="text-[var(--admin-text-subtle)] group-hover:text-[var(--admin-primary)] transition-colors" stroke={1.5} />
-          <p className="text-sm font-semibold text-[var(--admin-text-base)] group-hover:text-[var(--admin-primary)] transition-colors">
-            اختيار من مكتبة الوسائط
+        <div className="flex flex-col items-center justify-center gap-3">
+          <IconPhoto size={36} className="text-[var(--admin-text-subtle)]" stroke={1.5} />
+          <p className="text-sm font-semibold text-[var(--admin-text-base)]">
+            اسحب الصور هنا أو اختر إحدى الطريقتين
           </p>
-          <p className="text-xs text-[var(--admin-text-muted)] font-medium">
-            أو رفع صورة جديدة
-          </p>
+          <div className="flex flex-wrap items-center justify-center gap-3 mt-1">
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              leftIcon={<IconPhoto size={16} />}
+              onClick={() => setMediaPickerOpen(true)}
+              disabled={uploading}
+            >
+              اختيار من مكتبة الوسائط
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              size="sm"
+              leftIcon={<IconUpload size={16} />}
+              onClick={() => fileInputRef.current?.click()}
+              isLoading={uploading}
+            >
+              رفع من الجهاز
+            </Button>
+          </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            multiple={multiple}
+            className="hidden"
+            onChange={handleFileInputChange}
+          />
         </div>
       </div>
 
@@ -59,7 +142,7 @@ export function ImageUpload({ images, onChange, multiple = false }: ImageUploadP
               { }
               <img src={src} alt="Upload preview" className="w-full h-full object-cover" />
               <div className="absolute inset-0 bg-[var(--admin-bg-base)]/40 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center gap-2">
-                <button 
+                <button
                   type="button"
                   onClick={(e) => { e.stopPropagation(); removeImage(idx); }}
                   className="p-2 bg-[var(--admin-danger)] text-white rounded-[var(--admin-radius-md)] shadow-[var(--admin-shadow-md)] hover:bg-[#b91c1c] transition-colors hover:scale-105 active:scale-95"
@@ -72,7 +155,7 @@ export function ImageUpload({ images, onChange, multiple = false }: ImageUploadP
         </div>
       )}
 
-      <MediaPicker 
+      <MediaPicker
         open={mediaPickerOpen}
         onClose={() => setMediaPickerOpen(false)}
         onSelect={handleMediaSelect}

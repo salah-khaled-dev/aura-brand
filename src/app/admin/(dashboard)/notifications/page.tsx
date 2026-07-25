@@ -2,8 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { adminAr } from '@/lib/i18n/admin-ar';
-import { NotificationService } from '@/lib/services/notification.service';
-import { Notification } from '@/data/mock/notifications';
+import { NotificationService, Notification } from '@/lib/services/notification.service';
 import { toast } from 'sonner';
 import Link from 'next/link';
 import { formatDate } from '@/lib/utils/formatters';
@@ -14,15 +13,17 @@ import { Card } from '@/components/admin/design-system/Card';
 import { Button } from '@/components/admin/design-system/Button';
 
 // Tabler Icons
-import { 
-  IconBell, 
-  IconShoppingBag, 
-  IconUsers, 
-  IconStar, 
-  IconSettings, 
-  IconTrash, 
+import {
+  IconBell,
+  IconShoppingBag,
+  IconUsers,
+  IconStar,
+  IconSettings,
+  IconTrash,
   IconCheck,
-  IconChecks
+  IconChecks,
+  IconTicket,
+  IconAlertTriangle
 } from '@tabler/icons-react';
 
 export default function NotificationsPage() {
@@ -78,6 +79,9 @@ export default function NotificationsPage() {
       case 'customer': return <IconUsers size={20} className="text-[var(--admin-success)]" stroke={1.5} />;
       case 'review': return <IconStar size={20} className="text-[var(--admin-warning)]" stroke={1.5} />;
       case 'system': return <IconSettings size={20} className="text-[var(--admin-text-muted)]" stroke={1.5} />;
+      case 'promotion': return <IconTicket size={20} className="text-[var(--admin-warning)]" stroke={1.5} />;
+      case 'stock': return <IconAlertTriangle size={20} className="text-[var(--admin-danger)]" stroke={1.5} />;
+      default: return <IconBell size={20} className="text-[var(--admin-text-muted)]" stroke={1.5} />;
     }
   };
 

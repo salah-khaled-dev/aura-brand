@@ -6,7 +6,8 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
 }
 
 export function LuxuryInput({ label, error, className = "", id, ...props }: InputProps) {
-  const generatedId = id || (label ? `input-${label.replace(/\s+/g, '-').toLowerCase()}-${Math.random().toString(36).substring(2, 6)}` : undefined);
+  const reactId = React.useId();
+  const generatedId = id || (label ? reactId : undefined);
   return (
     <div className={`flex flex-col gap-1 w-full ${className}`}>
       {label && (
@@ -36,7 +37,8 @@ interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
 }
 
 export function LuxurySelect({ label, options, error, className = "", id, ...props }: SelectProps) {
-  const generatedId = id || (label ? `select-${label.replace(/\s+/g, '-').toLowerCase()}-${Math.random().toString(36).substring(2, 6)}` : undefined);
+  const reactId = React.useId();
+  const generatedId = id || (label ? reactId : undefined);
   return (
     <div className={`flex flex-col gap-1 w-full ${className}`}>
       {label && (
@@ -77,7 +79,8 @@ interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement
 }
 
 export function LuxuryTextarea({ label, error, className = "", id, ...props }: TextareaProps) {
-  const generatedId = id || (label ? `textarea-${label.replace(/\s+/g, '-').toLowerCase()}-${Math.random().toString(36).substring(2, 6)}` : undefined);
+  const reactId = React.useId();
+  const generatedId = id || (label ? reactId : undefined);
   return (
     <div className={`flex flex-col gap-1 w-full ${className}`}>
       {label && (

@@ -8,6 +8,8 @@ import { Order, OrderStatus, OrderPaymentStatus } from '@/data/mock/orders';
 import { getStatusMeta, WORKFLOW_STATUSES } from '@/lib/orders/order-status';
 import { formatCurrency, formatDate } from '@/lib/utils/formatters';
 import { toast } from 'sonner';
+import { StoreService, type StoreInfo } from '@/lib/services/storefront/store.service';
+import { downloadInvoicePdf } from '@/lib/pdf/generate-invoice-pdf';
 
 // SaaS UI Components
 import { PageHeader, Skeleton } from '@/components/admin/design-system/Layout';
@@ -30,13 +32,17 @@ import {
   IconTrash,
   IconMessage,
   IconTruckDelivery,
+  IconDownload,
+  IconLink,
 } from '@tabler/icons-react';
 
 export default function OrderDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: orderId } = use(params);
   const router = useRouter();
   const [order, setOrder] = useState<Order | null>(null);
+  const [storeInfo, setStoreInfo] = useState<StoreInfo | null>(null);
   const [loading, setLoading] = useState(true);
+  const [downloadingInvoice, setDownloadingInvoice] = useState(false);
   
   // Status Update States
   const [statusValue, setStatusValue] = useState<OrderStatus>('pending');
@@ -56,7 +62,8 @@ export default function OrderDetailsPage({ params }: { params: Promise<{ id: str
 
   async function loadOrder(id: string) {
     try {
-      const data = await OrderService.getOrder(id);
+      const [data, info] = await Promise.all([OrderService.getOrder(id), StoreService.getInfo()]);
+      setStoreInfo(info);
       if (data) {
         setOrder(data);
         setStatusValue(data.status);
@@ -152,7 +159,7 @@ export default function OrderDetailsPage({ params }: { params: Promise<{ id: str
         shippingCompany: shipping.shippingCompany.trim(),
         trackingNumber: shipping.trackingNumber.trim(),
         courierName: shipping.courierName.trim(),
-        estimatedDeliveryDate: shipping.estimatedDeliveryDate ? new Date(shipping.estimatedDeliveryDate).toISOString() : '',
+        estimatedDeliveryDate: shipping.estimatedDeliveryDate?.trim() ? new Date(shipping.estimatedDeliveryDate).toISOString() : null,
       });
       setOrder(updated);
       toast.success(adminAr.toasts.dataSaved);
@@ -163,12 +170,34 @@ export default function OrderDetailsPage({ params }: { params: Promise<{ id: str
     }
   };
 
-  const handlePrintInvoice = () => {
+  const handlePreviewInvoice = () => {
     window.open(`/admin/orders/${order?.id}/invoice`, '_blank');
   };
 
   const handlePrintPackingSlip = () => {
     window.open(`/admin/orders/${order?.id}/packing-slip`, '_blank');
+  };
+
+  const handleDownloadInvoice = async () => {
+    if (!order || !storeInfo) return;
+    setDownloadingInvoice(true);
+    try {
+      await downloadInvoicePdf(order, storeInfo);
+    } catch {
+      toast.error(adminAr.toasts.unexpectedError);
+    } finally {
+      setDownloadingInvoice(false);
+    }
+  };
+
+  const handleCopyInvoiceLink = async () => {
+    if (!order) return;
+    try {
+      await navigator.clipboard.writeText(`${window.location.origin}/admin/orders/${order.id}/invoice`);
+      toast.success('تم نسخ رابط الفاتورة');
+    } catch {
+      toast.error(adminAr.toasts.unexpectedError);
+    }
   };
 
   const [cancelling, setCancelling] = useState(false);
@@ -268,8 +297,12 @@ export default function OrderDetailsPage({ params }: { params: Promise<{ id: str
             <Button variant="secondary" onClick={handlePrintPackingSlip} leftIcon={<IconPackage size={18} />}>
               بوليصة الشحن
             </Button>
-            <Button variant="secondary" onClick={handlePrintInvoice} leftIcon={<IconPrinter size={18} />}>
-              طباعة الفاتورة
+            <Button variant="secondary" onClick={handleCopyInvoiceLink} leftIcon={<IconLink size={18} />} className="px-2" />
+            <Button variant="secondary" onClick={handlePreviewInvoice} leftIcon={<IconPrinter size={18} />}>
+              معاينة الفاتورة
+            </Button>
+            <Button variant="secondary" onClick={handleDownloadInvoice} isLoading={downloadingInvoice} leftIcon={<IconDownload size={18} />}>
+              تحميل PDF
             </Button>
             {order.status !== 'cancelled' && order.status !== 'delivered' && (
               <Button variant="warning" onClick={handleCancelOrder} disabled={cancelling} isLoading={cancelling} leftIcon={<IconBan size={18} />}>

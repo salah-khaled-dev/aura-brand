@@ -7,12 +7,12 @@ import { useStorefrontProducts } from "@/hooks/useStorefrontProducts";
 import { primaryImage, discountOriginalPrice, resolveStockStatus } from "@/data/mock/products";
 import { IconSearch as Search, IconAdjustmentsHorizontal as SlidersHorizontal, IconChevronRight, IconChevronLeft } from "@tabler/icons-react";
 import CollectionHero from "@/components/ui/CollectionHero";
-import { Skeleton } from "@/components/ui/Skeleton";
+import { Skeleton, ProductCardSkeleton } from "@/components/ui/Skeleton";
 
 function ShopContent() {
   const searchParams = useSearchParams();
   const categoryParam = searchParams.get("category");
-  const products = useStorefrontProducts();
+  const { products, loading } = useStorefrontProducts();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("الكل");
@@ -266,7 +266,13 @@ function ShopContent() {
 
           {/* Product grid - Spacers/Layout consistent */}
           <div className="flex-grow w-full">
-            {sortedProducts.length === 0 ? (
+            {loading && sortedProducts.length === 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <ProductCardSkeleton key={i} />
+                ))}
+              </div>
+            ) : sortedProducts.length === 0 ? (
               <div className="text-center py-20 bg-background-secondary border border-brand-border">
                 <p className="font-sans text-lg font-light text-text-primary">لا توجد قطع تتطابق مع الفلاتر المحددة</p>
                 <p className="text-xs text-text-secondary font-sans font-light mt-1">تأكدي من تغيير شروط البحث أو التهيئة</p>

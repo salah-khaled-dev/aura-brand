@@ -1,4 +1,5 @@
-import { mockStorage } from '@/lib/storage/mock-storage';
+import { createClient } from '@/lib/supabase/client';
+import type { Tables, TablesInsert } from '@/lib/supabase/database.types';
 
 export interface Brand {
   id: string;
@@ -12,49 +13,67 @@ export interface Brand {
   updatedAt: string;
 }
 
-let MOCK_BRANDS: Brand[] = [];
+type BrandRow = Tables<'brands'>;
 
-MOCK_BRANDS = mockStorage.read('brands', MOCK_BRANDS);
-const persistBrands = () => mockStorage.write('brands', MOCK_BRANDS);
+const supabase = createClient();
+
+function rowToBrand(row: BrandRow): Brand {
+  return {
+    id: row.id,
+    name: row.name,
+    slug: row.slug,
+    logo: row.logo ?? '',
+    description: row.description,
+    status: row.status as Brand['status'],
+    deletedAt: row.deleted_at ?? undefined,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
 
 export const BrandService = {
   async getBrands(includeDeleted = false): Promise<Brand[]> {
-    await new Promise(resolve => setTimeout(resolve, 400));
-    return includeDeleted ? [...MOCK_BRANDS] : MOCK_BRANDS.filter(c => !c.deletedAt);
+    let query = supabase.from('brands').select('*').order('created_at', { ascending: false });
+    if (!includeDeleted) query = query.is('deleted_at', null);
+    const { data, error } = await query;
+    if (error) throw error;
+    return (data ?? []).map(rowToBrand);
   },
 
   async getBrand(id: string): Promise<Brand | null> {
-    await new Promise(resolve => setTimeout(resolve, 200));
-    const c = MOCK_BRANDS.find(x => x.id === id);
-    return (c && !c.deletedAt) ? { ...c } : null;
+    const { data, error } = await supabase.from('brands').select('*').eq('id', id).is('deleted_at', null).maybeSingle();
+    if (error) throw error;
+    return data ? rowToBrand(data) : null;
   },
 
   async createBrand(data: Omit<Brand, 'id' | 'createdAt' | 'updatedAt'>): Promise<Brand> {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    const newBrand: Brand = {
-      ...data,
-      id: `brand_${Date.now()}`,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+    const insertRow: TablesInsert<'brands'> = {
+      name: data.name,
+      slug: data.slug,
+      logo: data.logo || null,
+      description: data.description,
+      status: data.status,
     };
-    MOCK_BRANDS = [...MOCK_BRANDS, newBrand];
-    persistBrands();
-    return newBrand;
+    const { data: row, error } = await supabase.from('brands').insert(insertRow).select().single();
+    if (error) throw error;
+    return rowToBrand(row);
   },
 
   async updateBrand(id: string, updates: Partial<Brand>): Promise<Brand> {
-    await new Promise(resolve => setTimeout(resolve, 400));
-    const idx = MOCK_BRANDS.findIndex(x => x.id === id);
-    if (idx === -1) throw new Error("Brand not found");
-    const updated = { ...MOCK_BRANDS[idx], ...updates, updatedAt: new Date().toISOString() };
-    MOCK_BRANDS = [...MOCK_BRANDS.slice(0, idx), updated, ...MOCK_BRANDS.slice(idx + 1)];
-    persistBrands();
-    return updated;
+    const patch: Partial<TablesInsert<'brands'>> = {};
+    if (updates.name !== undefined) patch.name = updates.name;
+    if (updates.slug !== undefined) patch.slug = updates.slug;
+    if (updates.logo !== undefined) patch.logo = updates.logo || null;
+    if (updates.description !== undefined) patch.description = updates.description;
+    if (updates.status !== undefined) patch.status = updates.status;
+
+    const { data: row, error } = await supabase.from('brands').update(patch).eq('id', id).select().single();
+    if (error) throw new Error('Brand not found');
+    return rowToBrand(row);
   },
 
   async softDelete(id: string): Promise<void> {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    const idx = MOCK_BRANDS.findIndex(x => x.id === id);
-    if (idx > -1) { MOCK_BRANDS[idx].deletedAt = new Date().toISOString(); persistBrands(); }
-  }
+    const { error } = await supabase.from('brands').update({ deleted_at: new Date().toISOString() }).eq('id', id);
+    if (error) throw error;
+  },
 };

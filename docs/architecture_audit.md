@@ -4,6 +4,12 @@
 **Auditor:** Claude Sonnet 4.6  
 **Scope:** `src/app/admin/` + `src/components/admin/` + `src/lib/services/`
 
+> **Note (2026-07-15):** This audit predates the Supabase migration. Auth,
+> staff creation, and password reset are now real Supabase Auth (no longer
+> mock). Products/categories/media are migrating in Phase A. For current
+> per-feature migration status, see
+> [`docs/migration/mock-to-supabase-audit.md`](migration/mock-to-supabase-audit.md).
+
 ---
 
 ## 1. Overall Architecture

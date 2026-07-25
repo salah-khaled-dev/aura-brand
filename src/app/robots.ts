@@ -1,12 +1,13 @@
 import { MetadataRoute } from 'next';
+import { SITE_URL } from '@/lib/constants/site';
 
 export default function robots(): MetadataRoute.Robots {
   return {
     rules: {
       userAgent: '*',
       allow: '/',
-      disallow: ['/profile', '/cart', '/checkout', '/tracking'],
+      disallow: ['/admin', '/api', '/profile', '/cart', '/checkout', '/tracking'],
     },
-    sitemap: 'https://aura-fashion-virid.vercel.app/sitemap.xml',
+    sitemap: `${SITE_URL}/sitemap.xml`,
   };
 }

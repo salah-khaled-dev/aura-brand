@@ -56,7 +56,7 @@ export function ProductForm({ initialData, isEdit = false }: ProductFormProps) {
   });
 
   useEffect(() => {
-    ProductService.getProducts().then(setAllProducts);
+    ProductService.getProducts().then(setAllProducts).catch(console.error);
   }, []);
 
   const handleChange = (field: keyof Product, value: unknown) => {
@@ -93,7 +93,7 @@ export function ProductForm({ initialData, isEdit = false }: ProductFormProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     const validation = ProductValidator.validate(formData, allProducts);
     if (!validation.isValid) {
       const firstError = Object.values(validation.errors)[0];

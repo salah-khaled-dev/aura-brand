@@ -11,6 +11,7 @@ import {
   IconClockExclamation,
   IconX,
   IconShieldLock,
+  IconCircleCheck,
 } from "@tabler/icons-react";
 
 import "@/styles/admin-theme.css";
@@ -27,6 +28,7 @@ import { AuthCard } from "./AuthCard";
 import { AuthInput } from "./AuthInput";
 import { PasswordField } from "./PasswordField";
 import { AuthButton } from "./AuthButton";
+import { ForgotPasswordModal } from "./ForgotPasswordModal";
 
 const t = adminAr.login;
 
@@ -72,7 +74,7 @@ function errorMessageFor(code: AuthError["code"]): string {
   }
 }
 
-function LoginForm() {
+function LoginForm({ onForgotPassword }: { onForgotPassword: () => void }) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -86,11 +88,13 @@ function LoginForm() {
   const [buttonText, setButtonText] = useState(t.signIn);
 
   const [sessionExpired, setSessionExpired] = useState(false);
+  const [passwordResetDone, setPasswordResetDone] = useState(false);
   const [shakeCard, setShakeCard] = useState(false);
   const emailRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (searchParams.get("reason") === "session_expired") setSessionExpired(true);
+    if (searchParams.get("reason") === "password_reset") setPasswordResetDone(true);
     emailRef.current?.focus();
   }, [searchParams]);
 
@@ -184,6 +188,17 @@ function LoginForm() {
           </motion.div>
         )}
 
+        {passwordResetDone && (
+          <motion.div variants={itemVariants}>
+            <Banner
+              tone="success"
+              icon={<IconCircleCheck size={18} stroke={1.7} />}
+              message={t.passwordResetSuccess}
+              onDismiss={() => setPasswordResetDone(false)}
+            />
+          </motion.div>
+        )}
+
         {formError && (
           <motion.div variants={itemVariants}>
             <Banner
@@ -258,7 +273,7 @@ function LoginForm() {
 
           <button
             type="button"
-            onClick={() => toast.info(t.forgotPasswordHint)}
+            onClick={onForgotPassword}
             className="rounded-[var(--admin-radius-sm)] text-[13px] font-semibold text-[var(--admin-primary)] underline-offset-4 transition-colors hover:text-[var(--admin-primary-hover)] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)]"
           >
             {t.forgotPassword}
@@ -304,12 +319,12 @@ function Banner({
   message,
   onDismiss,
 }: {
-  tone: "danger" | "warning";
+  tone: "danger" | "warning" | "success";
   icon: React.ReactNode;
   message: string;
   onDismiss?: () => void;
 }) {
-  const color = tone === "danger" ? "danger" : "warning";
+  const color = tone;
   return (
     <div
       role="alert"
@@ -445,6 +460,7 @@ function RequestAccessModal({ isOpen, onClose }: RequestAccessModalProps) {
 
 export function LoginScreen() {
   const [showRequestAccess, setShowRequestAccess] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
   return (
     <div
       className={`admin-theme ${GeistSans.variable} grid min-h-[100dvh] lg:grid-cols-[1.05fr_1fr] xl:grid-cols-[1.1fr_1fr] relative overflow-hidden`}
@@ -506,7 +522,7 @@ export function LoginScreen() {
           </header>
 
           <Suspense fallback={<FormSkeleton />}>
-            <LoginForm />
+            <LoginForm onForgotPassword={() => setShowForgotPassword(true)} />
           </Suspense>
         </AuthCard>
 
@@ -544,6 +560,11 @@ export function LoginScreen() {
       <RequestAccessModal
         isOpen={showRequestAccess}
         onClose={() => setShowRequestAccess(false)}
+      />
+
+      <ForgotPasswordModal
+        isOpen={showForgotPassword}
+        onClose={() => setShowForgotPassword(false)}
       />
 
       <Toaster

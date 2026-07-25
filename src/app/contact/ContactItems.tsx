@@ -8,7 +8,7 @@ import { getWhatsAppUrl, WHATSAPP_CONFIG } from "@/config/whatsapp";
 
 const DEFAULT_ITEMS = [
   { icon: MessageCircle, title: "واتساب المستشارة", text: `+${WHATSAPP_CONFIG.phoneNumber}`, href: getWhatsAppUrl() },
-  { icon: Mail,          title: "البريد الإلكتروني", text: "care@aura-fashion-virid.vercel.app", href: "mailto:care@aura-fashion-virid.vercel.app" },
+  { icon: Mail,          title: "البريد الإلكتروني", text: "care@aura-brand-virid.vercel.app", href: "mailto:care@aura-brand-virid.vercel.app" },
   { icon: MapPin,        title: "أتيلييه AURA",      text: "المهندسين، الجيزة، مصر",            href: "#atelier" },
   { icon: Clock,         title: "مواعيد العناية",    text: "يوميًا من 11 صباحًا حتى 8 مساءً",  href: "#hours" },
 ];

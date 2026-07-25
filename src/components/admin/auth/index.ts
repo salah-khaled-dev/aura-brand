@@ -5,3 +5,5 @@ export { AuthButton } from "./AuthButton";
 export { AuroraPanel } from "./AuroraPanel";
 export { AuraWordmark } from "./AuraWordmark";
 export { LoginScreen } from "./LoginScreen";
+export { ForgotPasswordModal } from "./ForgotPasswordModal";
+export { ResetPasswordScreen } from "./ResetPasswordScreen";

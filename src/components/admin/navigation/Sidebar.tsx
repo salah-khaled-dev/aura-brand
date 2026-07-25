@@ -13,7 +13,7 @@ import {
   IconReportMoney, IconReceipt2, IconCoin, IconBuilding, IconStack, IconChartPie,
   IconTicket, IconBook2,
   IconWorld,
-  IconSettings, IconBell, IconUsersGroup, IconShieldCheck,
+  IconSettings, IconBell, IconUsersGroup, IconShieldCheck, IconHistory,
   IconSparkles, IconChevronDown, IconChevronLeft, IconChevronRight, IconLogout,
 } from "@tabler/icons-react";
 import { adminAr } from "@/lib/i18n/admin-ar";
@@ -112,6 +112,7 @@ const NAV_GROUPS: NavGroup[] = [
       { nameKey: "users",         icon: IconUsersGroup,  path: "/admin/users",         color: "blue",   flag: "enableRBAC", permission: "admin.view" },
       { nameKey: "roles",         icon: IconShieldCheck, path: "/admin/users/roles",   color: "purple", flag: "enableRBAC", permission: "admin.view" },
       { nameKey: "notifications", icon: IconBell,        path: "/admin/notifications", color: "indigo", permission: "admin.view" },
+      { nameKey: "activityLog",   icon: IconHistory,     path: "/admin/activity-log",  color: "slate",  permission: "admin.view" },
       { nameKey: "settings",      icon: IconSettings,    path: "/admin/settings",      color: "slate",  permission: "admin.view" },
     ]
   },

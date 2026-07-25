@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { MediaService, MediaFilters } from '@/lib/services/media.service';
 import { Media } from '@/data/mock/media';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
+import { validateImageFile } from '@/lib/utils/image-file';
 
 // SaaS UI Components
 import { Input } from '@/components/admin/design-system/Input';
@@ -33,8 +34,10 @@ export function MediaPicker({ open, onClose, onSelect, multiple = false, allowed
   const [mediaItems, setMediaItems] = useState<Media[]>([]);
   const [folders, setFolders] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [filters, setFilters] = useState<MediaFilters>({
     search: '',
     folder: 'all'
@@ -102,23 +105,43 @@ export function MediaPicker({ open, onClose, onSelect, multiple = false, allowed
     onClose();
   };
 
-  const handleUploadMock = async () => {
-    const mockFile: Partial<Media> = {
-      fileName: `mock_upload_${Date.now()}.jpg`,
-      originalName: 'new_image.jpg',
-      alt: 'صورة جديدة',
-      mimeType: 'image/jpeg',
-      folder: filters.folder !== 'all' ? filters.folder : 'uncategorized',
-    };
-    
-    setLoading(true);
+  const handleUploadClick = () => {
+    if (uploading) return;
+    fileInputRef.current?.click();
+  };
+
+  const handleFilesSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    e.target.value = ''; // allow re-selecting the same file again later
+    if (files.length === 0 || uploading) return;
+
+    setUploading(true);
+    let successCount = 0;
     try {
-      await MediaService.uploadMedia(mockFile);
-      toast.success('تم الرفع بنجاح (محاكاة)');
-      loadMedia();
+      for (const file of files) {
+        const validationError = validateImageFile(file);
+        if (validationError) {
+          toast.error(validationError);
+          continue;
+        }
+        if (await MediaService.existsByName(file.name)) {
+          toast.warning(`تم تجاهل "${file.name}" لوجود ملف بنفس الاسم مسبقًا`);
+          continue;
+        }
+        await MediaService.uploadMedia(file, {
+          alt: file.name,
+          folder: filters.folder !== 'all' ? filters.folder : 'uncategorized',
+        });
+        successCount++;
+      }
+      if (successCount > 0) {
+        toast.success(successCount === 1 ? 'تم رفع الصورة بنجاح' : `تم رفع ${successCount} صور بنجاح`);
+        await loadMedia();
+      }
     } catch {
-      toast.error('حدث خطأ أثناء الرفع');
-      setLoading(false);
+      toast.error('حدث خطأ أثناء الرفع، حاول مرة أخرى');
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -174,9 +197,18 @@ export function MediaPicker({ open, onClose, onSelect, multiple = false, allowed
                   ))}
                 </select>
               </div>
-              <Button 
-                onClick={handleUploadMock}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={handleFilesSelected}
+              />
+              <Button
+                onClick={handleUploadClick}
                 leftIcon={<IconUpload size={18} />}
+                isLoading={uploading}
               >
                 رفع جديد
               </Button>

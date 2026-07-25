@@ -1,20 +1,33 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { motion } from "framer-motion";
-import { mockArticles, journalCategories } from "@/data/journal";
+import { StorefrontJournalService, JournalArticle, journalCategories } from "@/lib/services/storefront/storefront-journal.service";
 
 export default function JournalPage() {
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [articles, setArticles] = useState<JournalArticle[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const featuredArticle = mockArticles[0];
-  const remainingArticles = mockArticles.slice(1);
+  useEffect(() => {
+    StorefrontJournalService.getPublishedArticles()
+      .then(setArticles)
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, []);
+
+  const featuredArticle = articles[0];
+  const remainingArticles = articles.slice(1);
 
   const filteredArticles = activeCategory
-    ? mockArticles.filter((a) => a.category === activeCategory)
+    ? articles.filter((a) => a.category === activeCategory)
     : remainingArticles;
+
+  if (loading) {
+    return <div className="bg-background-primary min-h-screen" />;
+  }
 
   return (
     <div className="bg-background-primary min-h-screen pb-24 flex flex-col items-center overflow-hidden">
@@ -129,7 +142,7 @@ export default function JournalPage() {
         
         {filteredArticles.length === 0 && (
           <div className="text-center py-20 text-text-secondary font-sans text-sm">
-            {mockArticles.length === 0 ? "لا توجد مقالات بعد." : "لا توجد مقالات في هذا التصنيف حالياً."}
+            {articles.length === 0 ? "لا توجد مقالات بعد." : "لا توجد مقالات في هذا التصنيف حالياً."}
           </div>
         )}
       </section>

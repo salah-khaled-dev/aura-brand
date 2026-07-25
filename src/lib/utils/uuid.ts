@@ -8,6 +8,13 @@ export function generateId(): string {
   return crypto.randomUUID();
 }
 
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+/** Validates a string is a well-formed UUID (v1-v5). Used to guard values headed into `uuid`-typed RPC params. */
+export function isUUID(value: string | undefined | null): value is string {
+  return typeof value === 'string' && UUID_PATTERN.test(value);
+}
+
 /**
  * Generate a human-readable document number.
  * e.g. orderNumber("ORD", 5) → "ORD-00042" when sequence = 42

@@ -23,7 +23,7 @@ export default function Navbar() {
   const [isSearchOpen, setSearchOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const pathname = usePathname();
-  const products = useStorefrontProducts();
+  const { products } = useStorefrontProducts();
 
   useEffect(() => {
     const handleScroll = () => {

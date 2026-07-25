@@ -5,7 +5,7 @@
  * by the Website Management admin section. All individual services are re-
  * exported from here so consumers can import from one place.
  *
- * Persistence: mockStorage (localStorage) — Supabase-ready when the time comes.
+ * Persistence: Supabase (see 20260715000017_website_cms_and_seo.sql).
  * EventBus:    every mutation emits 'website.changed' so storefront components
  *              update instantly without a page reload.
  */

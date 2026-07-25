@@ -1,27 +1,28 @@
 "use client";
 
 /**
- * RBAC enforcement for the admin dashboard (mock-first).
+ * RBAC enforcement for the admin dashboard.
  *
- * The role/permission matrix lives in UsersService (module → {read, write, delete}).
- * This provider resolves the *current* user's effective permissions and exposes
- * `can(module, action)` + `canAccessModule(module)` used to gate navigation,
- * pages and action buttons.
+ * The role/permission matrix lives in UsersService (module → {read, write, delete}),
+ * backed by the `roles` table. This provider resolves the *current* user's
+ * effective permissions (from their Supabase Auth session → profiles.role/
+ * staff_role_key) and exposes `can(module, action)` + `canAccessModule(module)`
+ * used to gate navigation, pages and action buttons.
  *
- * Mock auth logs everyone in as the super-admin (full access), so to make
- * enforcement observable there is a "view as role" override (persisted to
- * localStorage). Switching it re-scopes the whole dashboard to that role's
- * permissions — navigation hides, pages block, and write/delete buttons disable.
- *
- * Supabase migration: replace `loadActualRoleId` with the real session→role lookup;
- * everything else stays identical.
+ * A super_admin can additionally switch a "view as role" override (persisted
+ * to localStorage) to preview the dashboard scoped to another role's
+ * permissions — navigation hides, pages block, and write/delete buttons
+ * disable accordingly. Every switch is written to the real activity_log via
+ * log_impersonation_event() (20260725000003), not just the local UI state.
  */
 
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { UsersService, MockRole } from '@/lib/services/users.service';
 import { AuthService, AuthenticatedUser } from '@/lib/services/auth.service';
 import { eventBus } from '@/lib/events/EventBus';
-import { RepositoryProvider } from '@/lib/providers/RepositoryProvider';
+import { createClient } from '@/lib/supabase/client';
+
+const supabase = createClient();
 
 export type PermissionAction = 'read' | 'write' | 'delete' | 'impersonation';
 export type PermissionModule =
@@ -280,23 +281,15 @@ export function PermissionProvider({ children }: { children: React.ReactNode }) 
           device = 'Mobile';
         }
 
-        RepositoryProvider.activityLog().create({
-          staffId: originalUser.id,
-          module: 'settings',
-          action: 'status_change',
-          entityType: 'Impersonation',
-          entityId: viewAsRoleId,
-          entityLabel: `تغيير عرض الدور من ${fromRole} إلى ${toRole}`,
-          changes: {
-            role: { before: prevViewAsRoleIdRef.current, after: viewAsRoleId }
-          },
-          ipAddress: '127.0.0.1',
-          device,
-          platform,
-          browser,
-          source: 'web',
-          userAgent: ua
-        }).catch(err => console.error('Failed to write impersonation log:', err));
+        supabase
+          .rpc('log_impersonation_event', {
+            p_from_role: fromRole,
+            p_to_role: toRole,
+            p_metadata: { device, platform, browser, userAgent: ua },
+          })
+          .then(({ error }) => {
+            if (error) console.error('Failed to write impersonation log:', error);
+          });
       }
 
       prevViewAsRoleIdRef.current = viewAsRoleId;

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import Link from 'next/link';
 import { StoreService, AnnouncementBarSettings } from '@/lib/services/storefront/store.service';
 import { useEventSubscribeMany } from '@/hooks/useEventBus';
@@ -24,7 +24,10 @@ export function AnnouncementBar() {
     }
   }, []);
 
-  // Initial value is seeded synchronously above; only live CMS edits need a re-fetch.
+  // No synchronous seed is available until the first real fetch completes
+  // (unlike the old mockStorage-backed version, there's nothing to read
+  // before any network request) — fetch on mount, then again on live CMS edits.
+  useEffect(() => { load(); }, [load]);
   useEventSubscribeMany(['website.changed'], load);
 
   if (!bar?.enabled || !bar.text.trim()) return null;

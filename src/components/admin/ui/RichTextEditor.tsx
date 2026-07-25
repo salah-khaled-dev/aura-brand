@@ -1,8 +1,14 @@
 "use client";
 
 import React, { useRef } from 'react';
+import DOMPurify from 'isomorphic-dompurify';
 import { MediaPicker } from './MediaPicker';
 import { Media } from '@/data/mock/media';
+
+const SANITIZE_CONFIG = {
+  ALLOWED_TAGS: ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'ul', 'ol', 'li', 'blockquote', 'a', 'img', 'strong', 'em', 'span', 'div', 'br'],
+  ALLOWED_ATTR: ['href', 'src', 'alt', 'title', 'class', 'id', 'target', 'rel'],
+};
 import { 
   IconBold, 
   IconItalic, 
@@ -44,7 +50,7 @@ export function RichTextEditor({ value, onChange, placeholder = 'اكتب هنا
   const execCommand = (command: string, arg?: string) => {
     document.execCommand(command, false, arg);
     if (editorRef.current) {
-      onChange(editorRef.current.innerHTML);
+      onChange(DOMPurify.sanitize(editorRef.current.innerHTML, SANITIZE_CONFIG));
     }
   };
 
@@ -56,7 +62,7 @@ export function RichTextEditor({ value, onChange, placeholder = 'اكتب هنا
   };
 
   const handleInput = (e: React.FormEvent<HTMLDivElement>) => {
-    onChange(e.currentTarget.innerHTML);
+    onChange(DOMPurify.sanitize(e.currentTarget.innerHTML, SANITIZE_CONFIG));
   };
 
   // Only set innerHTML on first mount if it's empty to avoid cursor jumping
@@ -64,7 +70,7 @@ export function RichTextEditor({ value, onChange, placeholder = 'اكتب هنا
     if (editorRef.current && editorRef.current.innerHTML !== value) {
       // Very basic sync for controlled component
       // In a real integration (e.g. Quill/TinyMCE) this is handled better
-      editorRef.current.innerHTML = value;
+      editorRef.current.innerHTML = DOMPurify.sanitize(value, SANITIZE_CONFIG);
     }
   }, []);
 
@@ -103,7 +109,7 @@ export function RichTextEditor({ value, onChange, placeholder = 'اكتب هنا
         style={{ minHeight }}
         dir="rtl"
         data-placeholder={placeholder}
-        dangerouslySetInnerHTML={{ __html: value }}
+        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(value, SANITIZE_CONFIG) }}
       />
       
       {/* Mock CSS for placeholder if empty */}

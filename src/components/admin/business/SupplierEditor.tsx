@@ -3,8 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { IconDeviceFloppy as Save, IconArrowRight as ArrowRight, IconUser as User, IconMapPin as MapPin, IconBriefcase as Briefcase, IconFileText as FileText } from '@tabler/icons-react';
-import { Supplier } from '@/data/mock/business';
-import { businessService } from '@/lib/services/business.service';
+import { businessService, Supplier } from '@/lib/services/business.service';
 import { toast } from 'sonner';
 
 interface SupplierEditorProps {
@@ -39,15 +38,17 @@ export function SupplierEditor({ id }: SupplierEditorProps) {
 
   useEffect(() => {
     if (!isNew && id) {
-      businessService.getSupplier(id).then(supplier => {
-        if (supplier) {
-          setFormData(supplier);
-        } else {
-          toast.error('المورد غير موجود');
-          router.push('/admin/business/suppliers');
-        }
-        setIsLoading(false);
-      });
+      businessService.getSupplier(id)
+        .then(supplier => {
+          if (supplier) {
+            setFormData(supplier);
+          } else {
+            toast.error('المورد غير موجود');
+            router.push('/admin/business/suppliers');
+          }
+        })
+        .catch(() => toast.error('فشل تحميل بيانات المورد'))
+        .finally(() => setIsLoading(false));
     }
   }, [id, isNew, router]);
 

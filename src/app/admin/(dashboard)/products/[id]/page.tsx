@@ -10,10 +10,10 @@ import { Product, ProductStatus, ProductVariant } from '@/data/mock/products';
 import { formatCurrency } from '@/lib/utils/formatters';
 import { useProtectedAutosave } from '@/hooks/useProtectedAutosave';
 import { toast } from 'sonner';
-import { IconArrowRight, IconDeviceFloppy, IconCloud, IconCloudOff, IconRefresh, IconEye, IconCalendar, IconPlus, IconTrash, IconPhoto, IconHistory } from '@tabler/icons-react';
+import { IconArrowRight, IconDeviceFloppy, IconCloud, IconCloudOff, IconRefresh, IconEye, IconCalendar, IconPlus, IconTrash, IconHistory } from '@tabler/icons-react';
 import { ActivityTimeline } from '@/components/admin/ActivityTimeline';
-import { getTimelineForEntity } from '@/data/mock/timeline';
-import { MediaLibraryModal } from '@/components/admin/MediaLibraryModal';
+import { ActivityLogService, ActivityLogEntry } from '@/lib/services/activity-log.service';
+import { ImageUpload } from '@/components/admin/ui/ImageUpload';
 
 export default function ProductEditorPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
@@ -23,10 +23,15 @@ export default function ProductEditorPage({ params }: { params: Promise<{ id: st
 
   const [initialLoading, setInitialLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'general' | 'costing' | 'variants' | 'timeline' | 'revisions'>('general');
-  const [showMediaLib, setShowMediaLib] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
 
   const [productData, setProductData] = useState<Product | null>(null);
+  const [timelineEvents, setTimelineEvents] = useState<ActivityLogEntry[]>([]);
+
+  useEffect(() => {
+    if (isNew) return;
+    ActivityLogService.getEntriesForEntity('products', id).then(setTimelineEvents).catch(() => {});
+  }, [id, isNew]);
 
   // Dynamic metadata options (single source of truth → Category/Collection/Brand services)
   const [categoryNames, setCategoryNames] = useState<string[]>([]);
@@ -278,33 +283,12 @@ export default function ProductEditorPage({ params }: { params: Promise<{ id: st
               </div>
 
               <div className={cardClass + " space-y-4"}>
-                <div className="flex items-center justify-between">
-                  <h2 className="text-lg font-bold text-[var(--admin-text-base)]">الصور والوسائط</h2>
-                  <button onClick={() => setShowMediaLib(true)} className="text-sm font-medium text-[var(--admin-primary)] hover:underline flex items-center gap-1">
-                    <IconPhoto size={16} /> فتح مكتبة الوسائط
-                  </button>
-                </div>
-                {data.images.length > 0 ? (
-                  <div className="grid grid-cols-4 gap-4">
-                    {data.images.map((img, idx) => (
-                      <div key={idx} className="relative aspect-square rounded-[var(--admin-radius-md)] border border-[var(--admin-border-base)] overflow-hidden group">
-                        <img src={img} alt="Product" className="w-full h-full object-cover" />
-                        <button onClick={() => updateData({ images: data.images.filter((_, i) => i !== idx) })} className="absolute top-2 right-2 p-1.5 bg-[var(--admin-bg-card)]/80 text-[var(--admin-danger)] rounded-md opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm shadow-sm hover:bg-[var(--admin-bg-card)]">
-                          <IconTrash size={16} />
-                        </button>
-                      </div>
-                    ))}
-                    <button onClick={() => setShowMediaLib(true)} className="flex flex-col items-center justify-center aspect-square rounded-[var(--admin-radius-md)] border-2 border-dashed border-[var(--admin-border-strong)] text-[var(--admin-text-subtle)] hover:border-[var(--admin-primary)] hover:text-[var(--admin-primary)] transition-colors bg-[var(--admin-bg-elevated)]">
-                      <IconPlus size={24} className="mb-2" />
-                      <span className="text-xs font-medium">إضافة صورة</span>
-                    </button>
-                  </div>
-                ) : (
-                  <div onClick={() => setShowMediaLib(true)} className="flex flex-col items-center justify-center py-12 rounded-[var(--admin-radius-md)] border-2 border-dashed border-[var(--admin-border-strong)] text-[var(--admin-text-subtle)] hover:border-[var(--admin-primary)] hover:text-[var(--admin-primary)] cursor-pointer transition-colors bg-[var(--admin-bg-elevated)]">
-                    <IconPhoto size={48} className="mb-4 opacity-50" />
-                    <p className="font-medium">انقر لفتح مكتبة الوسائط لاختيار الصور</p>
-                  </div>
-                )}
+                <h2 className="text-lg font-bold text-[var(--admin-text-base)]">الصور والوسائط</h2>
+                <ImageUpload
+                  multiple
+                  images={data.images}
+                  onChange={(images) => updateData({ images })}
+                />
               </div>
             </div>
           )}
@@ -449,7 +433,7 @@ export default function ProductEditorPage({ params }: { params: Promise<{ id: st
             <div className="space-y-6 animate-in fade-in">
               <div className={cardClass}>
                 <h2 className="text-lg font-bold text-[var(--admin-text-base)] mb-6">سجل نشاطات المنتج (Audit Log)</h2>
-                <ActivityTimeline events={getTimelineForEntity('product', id)} />
+                <ActivityTimeline events={timelineEvents} />
               </div>
             </div>
           )}
@@ -552,14 +536,6 @@ export default function ProductEditorPage({ params }: { params: Promise<{ id: st
           </div>
         </div>
       </div>
-
-      <MediaLibraryModal
-        isOpen={showMediaLib}
-        onClose={() => setShowMediaLib(false)}
-        onSelect={(media) => {
-          updateData({ images: [...data.images, media.url] });
-        }}
-      />
     </div>
   );
 }

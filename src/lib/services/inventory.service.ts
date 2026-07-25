@@ -1,20 +1,19 @@
-import { mockProducts, updateMockProducts, Product } from '@/data/mock/products';
+import { Product } from '@/data/mock/products';
+import { ProductService } from '@/lib/services/product.service';
+import { createClient } from '@/lib/supabase/client';
+import type { Tables } from '@/lib/supabase/database.types';
 import { eventBus } from '@/lib/events/EventBus';
-import { mockStorage } from '@/lib/storage/mock-storage';
 
 /**
- * InventoryService — canonical stock engine (mock-first, Supabase-last).
+ * InventoryService — canonical stock engine, Supabase-backed.
  *
- * Source of truth for stock is `Product.stock` in `data/mock/products.ts`
- * (single implicit warehouse `wh_main`). Every stock change is recorded as an
- * immutable StockMovement ledger entry and broadcast over the EventBus so that
- * Finance, Dashboard and Product views stay synchronized.
- *
- * Migration note: the public API mirrors the future
- * `IInventoryRepository` / `IStockMovementRepository` contracts. Swapping to
- * Supabase only requires re-implementing the methods below against the DB —
- * no page, store or business-logic changes. The warehouse-level
- * `InventoryLevel` split (multi-warehouse) is the only deferred shape.
+ * Source of truth for stock is `products.stock` (single implicit warehouse
+ * `wh_main`), same as the mock model it replaces. Every stock change is
+ * recorded as an immutable `stock_movements` ledger row via the
+ * `record_stock_movement` / `update_stock_movement` / `delete_stock_movement`
+ * RPCs (see 20260715000004_stock_movements.sql), which apply the stock delta
+ * and write the ledger row atomically, and broadcast over the EventBus so
+ * that Finance, Dashboard and Product views stay synchronized.
  */
 
 export const DEFAULT_WAREHOUSE_ID = 'wh_main';
@@ -83,26 +82,35 @@ export interface RecordMovementInput {
   userId?: string;
 }
 
-let MOCK_MOVEMENTS: InventoryMovement[] = [];
+const supabase = createClient();
 
-MOCK_MOVEMENTS = mockStorage.read('inventory.movements', MOCK_MOVEMENTS);
-const persistMovements = () => mockStorage.write('inventory.movements', MOCK_MOVEMENTS);
+type MovementRow = Tables<'stock_movements'> & { products: { name_ar: string } | null };
 
-const delay = (ms = 300) => new Promise(res => setTimeout(res, ms));
+const SELECT_WITH_PRODUCT = '*, products(name_ar)';
 
-function findProduct(productId: string): Product | undefined {
-  return mockProducts.find(p => p.id === productId);
+function rowToMovement(row: MovementRow): InventoryMovement {
+  return {
+    id: row.id,
+    productId: row.product_id,
+    productName: row.products?.name_ar ?? undefined,
+    variantId: row.variant_id ?? undefined,
+    type: row.type as MovementType,
+    quantity: row.quantity,
+    balanceBefore: row.balance_before,
+    balanceAfter: row.balance_after,
+    reason: row.reason,
+    referenceType: (row.reference_type as MovementReferenceType | null) ?? undefined,
+    referenceId: row.reference_id ?? undefined,
+    warehouseId: row.warehouse_id,
+    date: row.created_at,
+    userId: row.admin_id ?? 'admin_1',
+  };
 }
 
-/** Immutably write a product's stock back into the mock store. */
-function commitStock(productId: string, newStock: number): Product | undefined {
-  const idx = mockProducts.findIndex(p => p.id === productId);
-  if (idx === -1) return undefined;
-  const updated: Product = { ...mockProducts[idx], stock: Math.max(0, newStock) };
-  const next = [...mockProducts];
-  next[idx] = updated;
-  updateMockProducts(next);
-  return updated;
+async function fetchMovementRow(id: string): Promise<MovementRow> {
+  const { data, error } = await supabase.from('stock_movements').select(SELECT_WITH_PRODUCT).eq('id', id).single();
+  if (error) throw new Error(error.message);
+  return data as MovementRow;
 }
 
 function emitLowStock(product: Product) {
@@ -136,19 +144,27 @@ export const InventoryService = {
   // ─── Ledger reads ──────────────────────────────────────────────────────────
 
   async getMovements(productId?: string): Promise<InventoryMovement[]> {
-    await delay(300);
-    const data = productId ? MOCK_MOVEMENTS.filter(m => m.productId === productId) : [...MOCK_MOVEMENTS];
-    return data.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    let query = supabase.from('stock_movements').select(SELECT_WITH_PRODUCT).order('created_at', { ascending: false });
+    if (productId) query = query.eq('product_id', productId);
+    const { data, error } = await query;
+    if (error) throw new Error(error.message);
+    return (data as MovementRow[]).map(rowToMovement);
   },
 
   async getMovement(id: string): Promise<InventoryMovement | undefined> {
-    await delay(150);
-    return MOCK_MOVEMENTS.find(m => m.id === id);
+    const { data, error } = await supabase.from('stock_movements').select(SELECT_WITH_PRODUCT).eq('id', id).maybeSingle();
+    if (error) throw new Error(error.message);
+    return data ? rowToMovement(data as MovementRow) : undefined;
   },
 
   async getMovementsByReference(referenceType: MovementReferenceType, referenceId: string): Promise<InventoryMovement[]> {
-    await delay(150);
-    return MOCK_MOVEMENTS.filter(m => m.referenceType === referenceType && m.referenceId === referenceId);
+    const { data, error } = await supabase
+      .from('stock_movements')
+      .select(SELECT_WITH_PRODUCT)
+      .eq('reference_type', referenceType)
+      .eq('reference_id', referenceId);
+    if (error) throw new Error(error.message);
+    return (data as MovementRow[]).map(rowToMovement);
   },
 
   // ─── Core write: record a movement and mutate stock ──────────────────────────
@@ -158,34 +174,23 @@ export const InventoryService = {
    * This is the single entry point every other module uses to touch stock.
    */
   async recordMovement(input: RecordMovementInput): Promise<InventoryMovement> {
-    await delay(350);
-    const product = findProduct(input.productId);
-    if (!product) throw new Error('Product not found');
+    const { data, error } = await supabase.rpc('record_stock_movement', {
+      p_product_id: input.productId,
+      p_variant_id: input.variantId ?? null,
+      p_type: input.type,
+      p_quantity: input.quantity,
+      p_reason: input.reason,
+      p_reference_type: input.referenceType ?? null,
+      p_reference_id: input.referenceId ?? null,
+      p_warehouse_id: input.warehouseId ?? null,
+    });
+    if (error) throw new Error(error.message);
+    const created = data?.[0];
+    if (!created) throw new Error('Product not found');
 
-    const balanceBefore = product.stock ?? 0;
-    const balanceAfter = Math.max(0, balanceBefore + input.quantity);
-    const updated = commitStock(input.productId, balanceAfter);
-    if (!updated) throw new Error('Product not found');
-
-    const movement: InventoryMovement = {
-      id: `inv_mov_${Date.now()}`,
-      productId: input.productId,
-      productName: product.name,
-      variantId: input.variantId,
-      type: input.type,
-      quantity: balanceAfter - balanceBefore,
-      balanceBefore,
-      balanceAfter,
-      reason: input.reason,
-      referenceType: input.referenceType ?? (input.type === 'adjustment' ? 'adjustment' : undefined),
-      referenceId: input.referenceId,
-      warehouseId: input.warehouseId ?? DEFAULT_WAREHOUSE_ID,
-      date: new Date().toISOString(),
-      userId: input.userId ?? 'admin_1',
-    };
-    MOCK_MOVEMENTS = [movement, ...MOCK_MOVEMENTS];
-    persistMovements();
-    broadcast(movement, updated);
+    const movement = rowToMovement(await fetchMovementRow(created.id));
+    const product = await ProductService.getProduct(movement.productId);
+    if (product) broadcast(movement, product);
     return movement;
   },
 
@@ -228,40 +233,26 @@ export const InventoryService = {
     });
   },
 
-  // ─── Ledger correction (mock-only conveniences) ──────────────────────────────
+  // ─── Ledger correction ────────────────────────────────────────────────────
 
   /**
-   * Edit a recorded movement's quantity/reason, re-applying the stock delta.
-   * In a real ledger this would post a correcting entry; for the mock we mutate
-   * the row and reconcile stock by the difference.
+   * Edit a recorded movement's quantity/reason. Re-applies the *difference*
+   * between the old and new quantity to the product's current stock.
    */
   async updateMovement(id: string, changes: { quantity?: number; reason?: string }): Promise<InventoryMovement> {
-    await delay(300);
-    const idx = MOCK_MOVEMENTS.findIndex(m => m.id === id);
-    if (idx === -1) throw new Error('Movement not found');
-    const movement = MOCK_MOVEMENTS[idx];
-    const product = findProduct(movement.productId);
-    if (!product) throw new Error('Product not found');
+    const { data, error } = await supabase.rpc('update_stock_movement', {
+      p_movement_id: id,
+      p_quantity: changes.quantity ?? null,
+      p_reason: changes.reason ?? null,
+    });
+    if (error) throw new Error(error.message);
+    const updated = data?.[0];
+    if (!updated) throw new Error('Movement not found');
 
-    const newQty = changes.quantity ?? movement.quantity;
-    const diff = newQty - movement.quantity;
-
-    const balanceBefore = product.stock ?? 0;
-    const balanceAfter = Math.max(0, balanceBefore + diff);
-    const updatedProduct = commitStock(movement.productId, balanceAfter)!;
-
-    const updated: InventoryMovement = {
-      ...movement,
-      quantity: newQty,
-      reason: changes.reason ?? movement.reason,
-      balanceAfter: movement.balanceBefore + newQty,
-    };
-    const next = [...MOCK_MOVEMENTS];
-    next[idx] = updated;
-    MOCK_MOVEMENTS = next;
-    persistMovements();
-    broadcast(updated, updatedProduct);
-    return updated;
+    const movement = rowToMovement(await fetchMovementRow(updated.id));
+    const product = await ProductService.getProduct(movement.productId);
+    if (product) broadcast(movement, product);
+    return movement;
   },
 
   /**
@@ -270,22 +261,15 @@ export const InventoryService = {
    * immutable and must be reversed through their owning module.
    */
   async deleteMovement(id: string): Promise<void> {
-    await delay(300);
-    const movement = MOCK_MOVEMENTS.find(m => m.id === id);
-    if (!movement) throw new Error('Movement not found');
-    if (movement.type !== 'adjustment') {
-      throw new Error('Only manual adjustments can be deleted');
-    }
-    const product = findProduct(movement.productId);
+    const before = await fetchMovementRow(id);
+    const { error } = await supabase.rpc('delete_stock_movement', { p_movement_id: id });
+    if (error) throw new Error(error.message);
+
+    const product = await ProductService.getProduct(before.product_id);
     if (product) {
-      const reversed = commitStock(movement.productId, (product.stock ?? 0) - movement.quantity);
-      if (reversed) {
-        eventBus.emit('product.updated', reversed);
-        emitLowStock(reversed);
-      }
+      eventBus.emit('product.updated', product);
+      emitLowStock(product);
     }
-    MOCK_MOVEMENTS = MOCK_MOVEMENTS.filter(m => m.id !== id);
-    persistMovements();
     eventBus.emit('inventory.changed');
     eventBus.emit('finance.changed');
     eventBus.emit('business.changed');
@@ -294,40 +278,47 @@ export const InventoryService = {
   // ─── Derived reads ───────────────────────────────────────────────────────────
 
   async getLowStockAlerts(threshold?: number): Promise<InventoryAlert[]> {
-    await delay(300);
-    return mockProducts
-      .filter(p => {
-        const limit = threshold ?? p.lowStockLimit ?? 10;
-        return (p.stock ?? 0) <= limit;
-      })
+    const { data, error } = await supabase.from('products').select('id, name_ar, stock, low_stock_limit');
+    if (error) throw new Error(error.message);
+    const rows = (data ?? []) as { id: string; name_ar: string; stock: number; low_stock_limit: number }[];
+    return rows
+      .filter(p => (p.stock ?? 0) <= (threshold ?? p.low_stock_limit ?? 10))
       .map(p => ({
         productId: p.id,
-        productName: p.name,
+        productName: p.name_ar,
         currentStock: p.stock ?? 0,
-        threshold: threshold ?? p.lowStockLimit ?? 10,
+        threshold: threshold ?? p.low_stock_limit ?? 10,
       }));
   },
 
   /** Total inventory valuation at cost (stock × costPrice). */
-  getInventoryValue(): number {
-    return mockProducts.reduce((sum, p) => sum + (p.stock ?? 0) * (p.costPrice ?? 0), 0);
+  async getInventoryValue(): Promise<number> {
+    const { data, error } = await supabase.from('products').select('stock, cost_price');
+    if (error) throw new Error(error.message);
+    const rows = (data ?? []) as { stock: number; cost_price: number | null }[];
+    return rows.reduce((sum, p) => sum + (p.stock ?? 0) * (p.cost_price ?? 0), 0);
   },
 
-  getStats(threshold = 10): InventoryStats {
-    let inStock = 0, lowStock = 0, outOfStock = 0;
-    for (const p of mockProducts) {
-      const limit = p.lowStockLimit ?? threshold;
+  async getStats(threshold = 10): Promise<InventoryStats> {
+    const { data, error } = await supabase.from('products').select('stock, low_stock_limit, cost_price');
+    if (error) throw new Error(error.message);
+    const rows = (data ?? []) as { stock: number; low_stock_limit: number; cost_price: number | null }[];
+
+    let inStock = 0, lowStock = 0, outOfStock = 0, inventoryValue = 0;
+    for (const p of rows) {
+      const limit = p.low_stock_limit ?? threshold;
       const s = p.stock ?? 0;
       if (s <= 0) outOfStock++;
       else if (s <= limit) lowStock++;
       else inStock++;
+      inventoryValue += s * (p.cost_price ?? 0);
     }
     return {
-      totalProducts: mockProducts.length,
+      totalProducts: rows.length,
       inStock,
       lowStock,
       outOfStock,
-      inventoryValue: this.getInventoryValue(),
+      inventoryValue,
     };
   },
 };

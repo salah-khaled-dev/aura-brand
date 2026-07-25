@@ -8,6 +8,7 @@ import {
   IconAdjustments, IconChevronRight, IconPencil, IconTrash,
 } from '@tabler/icons-react';
 import { InventoryService, InventoryMovement } from '@/lib/services/inventory.service';
+import { ProductService } from '@/lib/services/product.service';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/admin/design-system/Card';
 import { Badge } from '@/components/admin/design-system/Badge';
 import { Button } from '@/components/admin/design-system/Button';
@@ -18,6 +19,9 @@ import { PageHeader } from '@/components/admin/design-system/Layout';
 import { DataTable, Column } from '@/components/admin/design-system/DataTable';
 import { StaggerContainer, StaggerItem } from '@/components/admin/ui/motion';
 import { adminAr } from '@/lib/i18n/admin-ar';
+import { isUUID } from '@/lib/utils/uuid';
+
+interface ProductOption { id: string; name: string; sku: string }
 
 const TYPE_CONFIG: Record<InventoryMovement['type'], { label: string; variant: 'success' | 'danger' | 'primary' | 'warning' }> = {
   receive:      { label: 'وارد',           variant: 'success'  },
@@ -33,6 +37,7 @@ export default function StockMovementsPage() {
   const [movements, setMovements] = useState<InventoryMovement[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [products, setProducts] = useState<ProductOption[]>([]);
   const [adjustModal, setAdjustModal] = useState(false);
   const [adjustProductId, setAdjustProductId] = useState('');
   const [adjustQty, setAdjustQty] = useState('');
@@ -56,9 +61,16 @@ export default function StockMovementsPage() {
 
   useEffect(() => { load(); }, [load]);
 
+  useEffect(() => {
+    ProductService.getProducts()
+      .then(list => setProducts(list.map(p => ({ id: p.id, name: p.name, sku: p.sku }))))
+      .catch(console.error);
+  }, []);
+
   const handleAdjust = async () => {
     const qty = parseInt(adjustQty, 10);
-    if (!adjustProductId.trim()) { toast.error('أدخل رمز المنتج'); return; }
+    if (!adjustProductId)     { toast.error('اختر المنتج'); return; }
+    if (!isUUID(adjustProductId)) { toast.error('معرّف المنتج غير صالح'); return; }
     if (isNaN(qty))               { toast.error('أدخل كمية صحيحة'); return; }
     if (!adjustReason.trim())     { toast.error('أدخل سبب التسوية'); return; }
     setSaving(true);
@@ -260,12 +272,20 @@ export default function StockMovementsPage() {
         }
       >
         <div className="space-y-4 py-1">
-          <Input
-            label="رمز المنتج (Product ID)"
-            placeholder="مثال: prod_1"
-            value={adjustProductId}
-            onChange={e => setAdjustProductId(e.target.value)}
-          />
+          <div>
+            <label className="block text-sm font-medium text-[var(--admin-text-muted)] mb-1">المنتج</label>
+            <select
+              required
+              value={adjustProductId}
+              onChange={e => setAdjustProductId(e.target.value)}
+              className="w-full h-12 px-4 border border-[var(--admin-border-base)] rounded-[var(--admin-radius-md)] bg-[var(--admin-bg-surface)] text-[var(--admin-text-base)] focus:ring-4 focus:ring-[var(--admin-primary-muted)] focus:border-[var(--admin-primary)] outline-none"
+            >
+              <option value="" disabled>اختر المنتج...</option>
+              {products.map(p => (
+                <option key={p.id} value={p.id}>{p.name} ({p.sku})</option>
+              ))}
+            </select>
+          </div>
           <Input
             label={adminAr.inventory.adjustmentQty}
             type="number"

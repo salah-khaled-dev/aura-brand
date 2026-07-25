@@ -1,5 +1,6 @@
 import { PurchaseOrderEditor } from '@/components/admin/business/PurchaseOrderEditor';
 
-export default function EditPurchaseOrderPage({ params }: { params: { id: string } }) {
-  return <PurchaseOrderEditor id={params.id} />;
+export default async function EditPurchaseOrderPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  return <PurchaseOrderEditor id={id} />;
 }

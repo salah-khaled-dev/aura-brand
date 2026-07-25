@@ -1,5 +1,3 @@
-import { mockStorage } from '@/lib/storage/mock-storage';
-
 export interface Media {
   id: string;
   fileName: string;
@@ -17,12 +15,3 @@ export interface Media {
   usedIn: string[];
   tags: string[];
 }
-
-export let mockMedia: Media[] = [];
-
-mockMedia = mockStorage.read('media', mockMedia);
-
-export const updateMockMedia = (newMedia: Media[]) => {
-  mockMedia = newMedia;
-  mockStorage.write('media', newMedia);
-};

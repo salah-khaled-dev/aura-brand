@@ -10,13 +10,22 @@ import Link from 'next/link';
 export default function PackingSlipPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: orderId } = use(params);
   const [order, setOrder] = useState<Order | null>(null);
+  const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
 
   useEffect(() => {
-    OrderService.getOrder(orderId).then(data => {
-      if (data) setOrder(data);
-    });
+    OrderService.getOrder(orderId)
+      .then(data => {
+        if (data) {
+          setOrder(data);
+          setState('ready');
+        } else {
+          setState('error');
+        }
+      })
+      .catch(() => setState('error'));
   }, [orderId]);
 
+  if (state === 'error') return <div className="p-10 text-center">تعذّر تحميل الطلب.</div>;
   if (!order) return <div className="p-10 text-center">جاري التحميل...</div>;
 
   return (

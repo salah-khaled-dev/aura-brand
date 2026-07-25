@@ -1,8 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { CustomerService, CustomerFilters } from '@/lib/services/customer.service';
-import { Customer, CustomerStatus } from '@/data/mock/customers';
+import { CustomerService, CustomerFilters, Customer, CustomerStatus } from '@/lib/services/customer.service';
 import { useEventSubscribeMany } from '@/hooks/useEventBus';
 import { REFRESH_EVENTS } from '@/lib/events/refresh-events';
 import { adminAr } from '@/lib/i18n/admin-ar';

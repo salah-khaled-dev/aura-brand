@@ -1,8 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { JournalService } from '@/lib/services/journal.service';
-import { Article } from '@/data/mock/journal';
+import { JournalService, Article } from '@/lib/services/journal.service';
 import { toast } from 'sonner';
 import { formatDate } from '@/lib/utils/formatters';
 import Link from 'next/link';

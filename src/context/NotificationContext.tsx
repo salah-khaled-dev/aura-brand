@@ -38,7 +38,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         return prev;
       }
       return {
-        id: Math.random().toString(36).substring(2, 9),
+        id: crypto.randomUUID(),
         message,
         type,
       };

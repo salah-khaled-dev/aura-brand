@@ -34,6 +34,7 @@ const playfairDisplay = Playfair_Display({
 });
 
 import { generatePageMetadata } from "@/utils/seo-helper";
+import { SITE_URL } from "@/lib/constants/site";
 
 export async function generateMetadata(): Promise<Metadata> {
   const meta = await generatePageMetadata(
@@ -43,7 +44,7 @@ export async function generateMetadata(): Promise<Metadata> {
   );
   return {
     ...meta,
-    metadataBase: new URL("https://aura-fashion-virid.vercel.app"),
+    metadataBase: new URL(SITE_URL),
     authors: [{ name: "AURA Fashion House" }],
     icons: {
       icon: "/logo.svg",
@@ -74,8 +75,8 @@ export default function RootLayout({
                 "@context": "https://schema.org",
                 "@type": "Organization",
                 "name": "AURA",
-                "url": "https://aura-fashion-virid.vercel.app",
-                "logo": "https://aura-fashion-virid.vercel.app/logo.svg",
+                "url": SITE_URL,
+                "logo": `${SITE_URL}/logo.svg`,
                 "sameAs": [
                   "https://www.instagram.com/aura.eg",
                   "https://www.facebook.com/aura.eg"
@@ -85,9 +86,9 @@ export default function RootLayout({
                 "@context": "https://schema.org",
                 "@type": "LocalBusiness",
                 "name": "AURA Atelier",
-                "image": "https://aura-fashion-virid.vercel.app/aura_hero_campaign.png",
-                "@id": "https://aura-fashion-virid.vercel.app/#localbusiness",
-                "url": "https://aura-fashion-virid.vercel.app",
+                "image": `${SITE_URL}/aura_hero_campaign.png`,
+                "@id": `${SITE_URL}/#localbusiness`,
+                "url": SITE_URL,
                 "telephone": "+201000000000",
                 "priceRange": "$$$",
                 "address": {

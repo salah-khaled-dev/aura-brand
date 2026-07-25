@@ -5,15 +5,18 @@ import { useSearchParams } from "next/navigation";
 import { LuxuryInput } from "@/components/ui/Form";
 import Button from "@/components/ui/Button";
 import { motion, AnimatePresence } from "framer-motion";
-import { IconSearch as Search, IconAlertCircle as AlertCircle, IconRefresh as RefreshCw, IconCheck } from "@tabler/icons-react";
+import { IconSearch as Search, IconAlertCircle as AlertCircle, IconRefresh as RefreshCw, IconCheck, IconCopy, IconTruck } from "@tabler/icons-react";
 import Image from "next/image";
 import { TrackingResultSkeleton } from "@/components/ui/Skeleton";
 import { OrderService } from "@/lib/services/order.service";
+import { createClient } from "@/lib/supabase/client";
 import type { Order } from "@/data/mock/orders";
 import { useEventSubscribeMany } from "@/hooks/useEventBus";
-import { getStatusMeta, buildCustomerTimeline, estimateDelivery } from "@/lib/orders/order-status";
+import { getStatusMeta, buildCustomerTimeline, estimateDelivery, hasShipped } from "@/lib/orders/order-status";
 import { ContentService } from "@/lib/services/storefront/content.service";
-import { StoreService } from "@/lib/services/storefront/store.service";
+import { StoreService, type StoreInfo } from "@/lib/services/storefront/store.service";
+import InvoiceView from "@/components/invoice/InvoiceView";
+import { IconFileText, IconChevronDown } from "@tabler/icons-react";
 
 type SearchStatus = "idle" | "loading" | "found" | "error";
 
@@ -35,19 +38,33 @@ function formatArDate(iso?: string) {
   return new Date(iso).toLocaleDateString("ar-EG", { year: "numeric", month: "long", day: "numeric" });
 }
 
-function TrackingContent({ c, whatsappUrl }: { c: typeof DEFAULT_CONTENT; whatsappUrl: string }) {
+function TrackingContent({ c, whatsappUrl, storeInfo }: { c: typeof DEFAULT_CONTENT; whatsappUrl: string; storeInfo: StoreInfo | null }) {
   const searchParams = useSearchParams();
   const [orderId, setOrderId] = useState("");
   const [contact, setContact] = useState("");
   const [status, setStatus] = useState<SearchStatus>("idle");
   const [order, setOrder] = useState<Order | null>(null);
+  const [showInvoice, setShowInvoice] = useState(false);
+  const [trackingCopied, setTrackingCopied] = useState(false);
 
-  const lookup = useCallback(async (rawId: string, mode: "loading" | "silent" = "loading") => {
+  const handleCopyTracking = async () => {
+    if (!order?.trackingNumber) return;
+    try {
+      await navigator.clipboard.writeText(order.trackingNumber);
+      setTrackingCopied(true);
+      setTimeout(() => setTrackingCopied(false), 2000);
+    } catch {
+      // clipboard access denied — the number is still visible to copy manually
+    }
+  };
+
+  const lookup = useCallback(async (rawId: string, rawContact: string, mode: "loading" | "silent" = "loading") => {
     const id = rawId.trim();
-    if (!id) return;
+    const contactValue = rawContact.trim();
+    if (!id || !contactValue) return;
     if (mode === "loading") setStatus("loading");
     try {
-      const found = await OrderService.getOrderByNumber(id);
+      const found = await OrderService.getOrderByNumberOrTracking(id, contactValue);
       if (found) {
         setOrder(found);
         setStatus("found");
@@ -61,21 +78,47 @@ function TrackingContent({ c, whatsappUrl }: { c: typeof DEFAULT_CONTENT; whatsa
   }, []);
 
   useEffect(() => {
-    const idParam = searchParams.get("id");
-    if (idParam) {
-      setOrderId(idParam);
-      lookup(idParam);
+    const idParam = searchParams.get("id") || searchParams.get("order");
+    if (!idParam) return;
+    setOrderId(idParam);
+    // Same-browser redirect straight from checkout success — the contact used
+    // to place the order was stashed locally so this deep link doesn't force
+    // the customer to re-type it. A stranger opening a bare order-number link
+    // on a different device won't have this and will need to enter it manually.
+    const storedContact = window.localStorage.getItem("aura_last_order_contact") || "";
+    if (storedContact) {
+      setContact(storedContact);
+      lookup(idParam, storedContact);
     }
   }, [searchParams, lookup]);
 
   useEventSubscribeMany(["order.updated", "order.created", "order.deleted"], () => {
-    if (order) lookup(order.orderNumber, "silent");
+    if (order) lookup(order.orderNumber, order.customerPhone || order.customerEmail || contact, "silent");
   });
+
+  // Cross-client live updates: an admin changing this order's status in a
+  // different browser/device reaches this page via a Realtime Broadcast
+  // channel keyed by order id (the EventBus above only covers the same
+  // browser tab/session). Broadcast, not postgres_changes: this page is
+  // reachable by anonymous guests, and postgres_changes would need a
+  // table-wide anon SELECT policy on `orders` to work — see
+  // broadcast_order_change() in 20260714120022_orders_phase_b_columns.sql.
+  useEffect(() => {
+    if (!order) return;
+    const supabase = createClient();
+    const channel = supabase
+      .channel(`order:${order.id}`, { config: { private: true } })
+      .on("broadcast", { event: "UPDATE" }, () => lookup(order.orderNumber, order.customerPhone || order.customerEmail || contact, "silent"))
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [order?.id, order?.orderNumber, order?.customerPhone, order?.customerEmail, contact, lookup]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!orderId) return;
-    lookup(orderId);
+    if (!orderId || !contact.trim()) return;
+    lookup(orderId, contact);
   };
 
   const meta = order ? getStatusMeta(order.status) : null;
@@ -89,15 +132,16 @@ function TrackingContent({ c, whatsappUrl }: { c: typeof DEFAULT_CONTENT; whatsa
         <form onSubmit={handleSearchSubmit} className="flex flex-col gap-6">
           <div className="flex flex-col gap-4 text-right" dir="rtl">
             <LuxuryInput
-              label="رقم طلب الكوتور *"
-              placeholder="مثال: AURA-10025"
+              label="رقم الطلب أو رقم التتبع *"
+              placeholder="مثال: AURA-10025 أو رقم التتبع"
               required
               value={orderId}
               onChange={(e) => setOrderId(e.target.value)}
             />
             <LuxuryInput
-              label="رقم الهاتف أو البريد الإلكتروني المعتمد"
-              placeholder="مثال: noura@example.com (اختياري)"
+              label="رقم الهاتف أو البريد الإلكتروني المستخدم عند الطلب *"
+              placeholder="مثال: noura@example.com"
+              required
               value={contact}
               onChange={(e) => setContact(e.target.value)}
             />
@@ -133,8 +177,8 @@ function TrackingContent({ c, whatsappUrl }: { c: typeof DEFAULT_CONTENT; whatsa
             >
               <Search className="w-10 h-10 stroke-[1.2] text-brand-border" />
               <div>
-                <h3 className="font-sans text-sm font-semibold text-text-primary">أدخلي رقم الطلب للمتابعة</h3>
-                <p className="text-xs text-text-secondary font-light mt-1">لم تتبعي أي طلب بعد. أدخلي رقم طلبكِ في النموذج أعلاه لمشاهدة تفاصيل الشحن.</p>
+                <h3 className="font-sans text-sm font-semibold text-text-primary">أدخلي رقم الطلب أو رقم التتبع للمتابعة</h3>
+                <p className="text-xs text-text-secondary font-light mt-1">لم تتبعي أي طلب بعد. أدخلي رقم طلبكِ أو رقم التتبع في النموذج أعلاه لمشاهدة تفاصيل الشحن.</p>
               </div>
             </motion.div>
           )}
@@ -149,7 +193,7 @@ function TrackingContent({ c, whatsappUrl }: { c: typeof DEFAULT_CONTENT; whatsa
               <div>
                 <h3 className="font-sans text-sm font-bold text-text-primary">لم يتم العثور على طلب</h3>
                 <p className="text-xs text-text-secondary font-light mt-2 max-w-sm leading-relaxed">
-                  رقم الطلب الذي أدخلتيه غير مسجل لدينا في أتيلييه AURA. يرجى مراجعة رسالة التأكيد أو كتابة رقم الطلب بالشكل الصحيح (مثال: AURA-10025).
+                  الرقم الذي أدخلتيه (رقم الطلب أو رقم التتبع) غير مسجل لدينا في أتيلييه AURA، أو أن بيانات التواصل غير مطابقة. يرجى مراجعة رسالة التأكيد أو كتابة الرقم بالشكل الصحيح (مثال: AURA-10025).
                 </p>
               </div>
             </motion.div>
@@ -265,28 +309,56 @@ function TrackingContent({ c, whatsappUrl }: { c: typeof DEFAULT_CONTENT; whatsa
                   ))}
                 </div>
 
-                {(order.trackingNumber || order.shippingCompany || order.courierName) && (
-                  <div className="border-t border-brand-border pt-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    {order.shippingCompany && (
-                      <div>
-                        <span className="font-sans text-[10px] text-text-secondary font-medium">شركة الشحن</span>
-                        <p className="font-sans text-xs font-bold text-text-primary mt-0.5">{order.shippingCompany}</p>
+                <div className="border-t border-brand-border pt-4 flex flex-col gap-4">
+                  {order.trackingNumber ? (
+                    <div className="bg-accent/5 border border-accent/30 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <IconTruck className="w-6 h-6 text-accent shrink-0" />
+                        <div>
+                          <span className="font-sans text-[10px] text-text-secondary font-medium block">رقم التتبع</span>
+                          <span className="font-display text-base font-bold text-accent" dir="ltr">{order.trackingNumber}</span>
+                        </div>
                       </div>
-                    )}
-                    {order.trackingNumber && (
-                      <div>
-                        <span className="font-sans text-[10px] text-text-secondary font-medium">رقم التتبع</span>
-                        <p className="font-sans text-xs font-bold text-text-primary mt-0.5" dir="ltr">{order.trackingNumber}</p>
-                      </div>
-                    )}
-                    {order.courierName && (
-                      <div>
-                        <span className="font-sans text-[10px] text-text-secondary font-medium">مندوب التوصيل</span>
-                        <p className="font-sans text-xs font-bold text-text-primary mt-0.5">{order.courierName}</p>
-                      </div>
-                    )}
-                  </div>
-                )}
+                      <button
+                        type="button"
+                        onClick={handleCopyTracking}
+                        className="inline-flex items-center justify-center gap-2 border border-accent/40 text-accent font-sans text-[11px] px-4 py-2 hover:bg-accent hover:text-background-secondary transition-colors self-start sm:self-auto"
+                      >
+                        <IconCopy className="w-3.5 h-3.5" />
+                        {trackingCopied ? "تم النسخ" : "نسخ الرقم"}
+                      </button>
+                    </div>
+                  ) : hasShipped(order.status) ? (
+                    <div className="bg-background-primary border border-brand-border/60 p-4 text-center">
+                      <p className="font-sans text-xs text-text-secondary leading-relaxed">
+                        تم شحن طلبكِ، وسيتم عرض رقم التتبع هنا فور إضافته من قِبل شركة الشحن.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="bg-background-primary border border-brand-border/60 p-4 text-center">
+                      <p className="font-sans text-xs text-text-secondary leading-relaxed">
+                        لم يتم شحن طلبكِ بعد. سيتم إنشاء رقم التتبع وإظهاره هنا بمجرد خروج الطلب للشحن.
+                      </p>
+                    </div>
+                  )}
+
+                  {(order.shippingCompany || order.courierName) && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {order.shippingCompany && (
+                        <div>
+                          <span className="font-sans text-[10px] text-text-secondary font-medium">شركة الشحن</span>
+                          <p className="font-sans text-xs font-bold text-text-primary mt-0.5">{order.shippingCompany}</p>
+                        </div>
+                      )}
+                      {order.courierName && (
+                        <div>
+                          <span className="font-sans text-[10px] text-text-secondary font-medium">مندوب التوصيل</span>
+                          <p className="font-sans text-xs font-bold text-text-primary mt-0.5">{order.courierName}</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
 
                 <div className="border-t border-brand-border pt-4">
                   <span className="font-sans text-[10px] text-text-secondary font-medium">عنوان الشحن</span>
@@ -297,6 +369,25 @@ function TrackingContent({ c, whatsappUrl }: { c: typeof DEFAULT_CONTENT; whatsa
                   <span className="font-sans text-[10px] text-text-secondary font-medium">آخر تحديث</span>
                   <span className="font-sans text-xs font-semibold text-text-primary">{formatArDate(order.updatedAt)}</span>
                 </div>
+              </div>
+
+              {/* Invoice */}
+              <div className="bg-background-secondary border border-brand-border p-6 md:p-8" dir="rtl">
+                <button
+                  type="button"
+                  onClick={() => setShowInvoice((v) => !v)}
+                  className="w-full flex items-center justify-between"
+                >
+                  <span className="flex items-center gap-2 font-sans text-sm font-bold text-text-primary">
+                    <IconFileText className="w-4 h-4 text-accent" /> الفاتورة
+                  </span>
+                  <IconChevronDown className={`w-4 h-4 text-text-secondary transition-transform ${showInvoice ? "rotate-180" : ""}`} />
+                </button>
+                {showInvoice && storeInfo && (
+                  <div className="mt-6">
+                    <InvoiceView order={order} storeInfo={storeInfo} />
+                  </div>
+                )}
               </div>
             </motion.div>
           )}
@@ -322,17 +413,19 @@ function TrackingContent({ c, whatsappUrl }: { c: typeof DEFAULT_CONTENT; whatsa
 export default function TrackingPage() {
   const [c, setC] = useState(DEFAULT_CONTENT);
   const [whatsappUrl, setWhatsappUrl] = useState('https://wa.me/201000000000');
+  const [storeInfo, setStoreInfo] = useState<StoreInfo | null>(null);
 
   const loadContent = useCallback(async () => {
     try {
-      const [blocks, storeInfo] = await Promise.all([
+      const [blocks, info] = await Promise.all([
         ContentService.getContentByGroup('pages'),
         StoreService.getInfo(),
       ]);
       const map: Record<string, string> = {};
       blocks.forEach(b => { map[b.key] = b.value; });
       setC(prev => ({ ...prev, ...map }));
-      if (storeInfo.socialMedia?.whatsapp) setWhatsappUrl(storeInfo.socialMedia.whatsapp);
+      setStoreInfo(info);
+      if (info.socialMedia?.whatsapp) setWhatsappUrl(info.socialMedia.whatsapp);
     } catch {
       // keep defaults
     }
@@ -358,7 +451,7 @@ export default function TrackingPage() {
           <TrackingResultSkeleton />
         </div>
       }>
-        <TrackingContent c={c} whatsappUrl={whatsappUrl} />
+        <TrackingContent c={c} whatsappUrl={whatsappUrl} storeInfo={storeInfo} />
       </Suspense>
     </div>
   );

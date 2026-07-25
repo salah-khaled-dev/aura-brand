@@ -1,4 +1,4 @@
-import { Supplier, PurchaseOrder, Expense, Asset, Liability, Capital } from '@/data/mock/business';
+import type { Supplier, PurchaseOrder, Expense, Asset, Liability, Capital } from '@/lib/services/business.service';
 
 export interface IBusinessRepository {
   // Suppliers

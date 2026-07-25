@@ -5,7 +5,7 @@ import { Button } from '@/components/admin/design-system/Button';
 import { Input } from '@/components/admin/design-system/Input';
 import React, { useState, useEffect } from 'react';
 import { IconDeviceFloppy } from '@tabler/icons-react';
-import { Liability } from '@/data/mock/business';
+import { Liability } from '@/lib/services/business.service';
 
 interface LiabilityModalProps {
   isOpen: boolean;

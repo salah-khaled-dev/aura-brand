@@ -1,4 +1,5 @@
 import { Metadata } from "next";
+import { SITE_URL } from "@/lib/constants/site";
 
 export const metadata: Metadata = {
   title: "المفضلة | AURA",
@@ -6,10 +7,10 @@ export const metadata: Metadata = {
   openGraph: {
     title: "المفضلة | AURA",
     description: "القطع التي حفظتِها من تشكيلات أورا الفاخرة.",
-    url: "https://aura-fashion-virid.vercel.app/wishlist",
+    url: `${SITE_URL}/wishlist`,
   },
   alternates: {
-    canonical: "https://aura-fashion-virid.vercel.app/wishlist",
+    canonical: `${SITE_URL}/wishlist`,
   },
 };
 

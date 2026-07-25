@@ -39,10 +39,14 @@ function setMeta(selector: string, attr: string, value: string) {
 /**
  * SEOInjector — client-side component that dynamically updates `<head>` meta
  * tags from SEOService. Runs on every route change and whenever 'website.changed'
- * is emitted, so admin edits propagate to the open storefront tab instantly.
+ * is emitted.
  *
- * Static metadata from layout.tsx provides the SSR/bot baseline; this layer
- * overlays any CMS overrides for human visitors after hydration.
+ * `generateMetadata()` (src/utils/seo-helper.ts) already reads the same
+ * `seo_settings` table server-side — that SSR output is what crawlers/bots
+ * and every other visitor see, and it is correct on its own. This component
+ * only exists so an admin with the storefront open in another tab sees their
+ * edit reflected immediately, without needing a full reload; it is a live-
+ * preview convenience layer, not the mechanism SEO depends on.
  */
 export function SEOInjector() {
   const pathname = usePathname();

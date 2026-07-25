@@ -2,12 +2,26 @@
 
 import { type Product, primaryImage, discountOriginalPrice, resolveStockStatus } from "@/data/mock/products";
 import { ProductCard } from "@/components/ui/Card";
+import { ProductCardSkeleton } from "@/components/ui/Skeleton";
 
 interface SeasonalProductGridProps {
   products: Product[];
+  loading?: boolean;
 }
 
-export default function SeasonalProductGrid({ products }: SeasonalProductGridProps) {
+export default function SeasonalProductGrid({ products, loading = false }: SeasonalProductGridProps) {
+  if (loading && products.length === 0) {
+    return (
+      <section className="py-16 md:py-24 max-w-[1440px] mx-auto px-4 md:px-12 bg-background-primary">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-6 gap-y-12">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <ProductCardSkeleton key={i} />
+          ))}
+        </div>
+      </section>
+    );
+  }
+
   if (products.length === 0) {
     return (
       <div className="py-24 flex flex-col items-center justify-center text-center px-6">

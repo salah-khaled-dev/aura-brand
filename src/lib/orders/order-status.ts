@@ -176,6 +176,12 @@ export function getStatusMeta(status: OrderStatus): OrderStatusMeta {
   return ORDER_STATUS_META[status] ?? ORDER_STATUS_META.pending;
 }
 
+/** True once an order has left the atelier for delivery (shipped, out for delivery, or delivered). */
+export function hasShipped(status: OrderStatus): boolean {
+  const index = ORDER_STATUS_SEQUENCE.indexOf(getStatusMeta(status).key);
+  return index >= ORDER_STATUS_SEQUENCE.indexOf('shipped');
+}
+
 export function fulfillmentForStatus(status: OrderStatus): OrderFulfillmentStatus {
   return STATUS_TO_FULFILLMENT[status] ?? 'new';
 }
@@ -232,8 +238,11 @@ export function buildCustomerTimeline(order: Pick<Order, 'status' | 'timeline'>)
     return {
       key,
       label: meta.timelineLabel,
+      // Never surface a date for an upcoming step — a stray timestamp (e.g. an
+      // admin correction that reverted a "delivered" order back a stage) would
+      // otherwise make a future step read as already completed.
+      date: state === 'upcoming' ? null : dateForStatus(key),
       description: meta.description,
-      date: dateForStatus(key),
       state,
     };
   });

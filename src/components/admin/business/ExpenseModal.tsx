@@ -6,7 +6,7 @@ import { Input } from '@/components/admin/design-system/Input';
 import { TextArea } from '@/components/admin/design-system/TextArea';
 import React, { useState, useEffect } from 'react';
 import { IconDeviceFloppy } from '@tabler/icons-react';
-import { Expense } from '@/data/mock/business';
+import { Expense } from '@/lib/services/business.service';
 
 interface ExpenseModalProps {
   isOpen: boolean;

@@ -1,0 +1,95 @@
+# Phase B.1 — Orders & Coupons Migration (Mock → Supabase)
+
+**Status:** Code complete, migrations written but **not yet applied to the live database** (no CLI link / DB credentials available in this session). **Date:** 2026-07-15.
+
+## Post-review security hardening
+
+A background security review (run automatically against the first version of this migration) flagged 4 issues. All 4 are now fixed; two of them were genuinely critical and are worth understanding before touching this schema again:
+
+1. **CRITICAL — the first cut's `orders_select_guest`/`order_items_select_guest` RLS policies were a PII leak.** RLS filters *rows*, not *which columns/rows a client requests in one query* — `to anon using (user_id is null)` let any anonymous caller run `select * from orders` and read every guest's name/email/phone/address, not just the one order they knew the number for. **Fixed:** replaced with a `get_guest_order(p_order_number text)` SECURITY DEFINER RPC that returns only the single matching guest order; there is now no RLS policy granting `anon` direct SELECT on `orders`/`order_items` at all. `order.service.ts`'s `getOrderByNumber` calls this RPC (with a fallback to the caller's own RLS-scoped rows for a hypothetical future authenticated path).
+2. **This RLS tightening broke `createOrder()` too, transitively.** Postgres gates a `RETURNING` clause with the same SELECT policies as a plain read — so `insert(...).select().single()` would still *write* successfully for a guest but come back empty, breaking every post-checkout confirmation. **Fixed:** added `create_guest_order(p_order jsonb, p_items jsonb)`, a SECURITY DEFINER RPC that does the whole order+items insert atomically and returns the result as jsonb (its internal `INSERT ... RETURNING` runs as the function owner, unaffected by the caller's RLS). `order.service.ts`'s `createOrder()` now calls this instead of direct table inserts.
+3. **HIGH — `increment_coupon_usage(p_code text)` had no authorization gate.** Any anonymous caller could invoke it directly, repeatedly, for any coupon code, to exhaust or auto-disable someone else's coupon without ever placing an order. **Fixed:** signature is now `increment_coupon_usage(p_code text, p_order_id uuid)`; the function verifies a real guest order exists referencing that exact code before incrementing, and silently no-ops otherwise. `coupon.service.ts`'s `incrementUsage(code, orderId)` and both call sites (`checkout/page.tsx`, admin `orders/page.tsx`) were updated to pass the new order's id. **Side finding:** the admin "new order" form never actually set `couponCode` on `CreateOrderInput` in the first place — a pre-existing gap the old mock system's unguarded `incrementUsage(code)` silently papered over. Fixed in the same pass (`orders/page.tsx`), since the more correct RPC would otherwise silently fail to redeem coupons applied from the admin panel.
+4. **MEDIUM — PostgREST filter injection in `getOrders()`'s admin search.** `filters.search` was interpolated directly into a `.or()` filter string; an admin (or anything reusing this filter later) could inject extra `ilike`/comma-separated clauses. **Fixed:** search input is escaped (`,()\%_` and backslash) before interpolation.
+
+**Also replaced during this pass:** the tracking page's live-update mechanism moved from a `postgres_changes` subscription (which would have needed the same broad anon SELECT policy that was just closed) to Realtime **Broadcast from Database** — an `after update on orders` trigger calls `realtime.broadcast_changes()` to a topic keyed by the order's own `id` (`order:<uuid>`), and `realtime.messages` RLS scopes receipt to that topic pattern. The unguessable order `id` is the capability token here, same trust model as the order-number lookup — knowing it (learned only via `get_guest_order`'s response) is what grants access, not the caller's role.
+
+None of this has been run against a live database in this session (see "Status" above) — the SQL is believed correct but unexercised; verify RPC behavior carefully during step 1 of "Manual verification steps" below before trusting checkout in production.
+
+## Summary
+
+`order.service.ts` and `coupon.service.ts` now read and write Supabase
+directly, replacing `mockOrders`/`mockCoupons`/`localStorage`. All existing
+TypeScript interfaces (`Order`, `OrderItem`, `Coupon`, `CreateOrderInput`,
+`OrderFilters`) are unchanged — every admin page, the checkout flow, and the
+tracking page keep working against the same shapes. Cart/Wishlist were
+**intentionally not migrated** (see "Not done" below — you chose this).
+
+Two additive migrations extend the existing `orders`/`order_items`/`coupons`
+schema (same JSONB-passthrough + status/is_active-sync-trigger pattern as the
+Phase A products/categories migration) to cover fields the mock model had
+that the original schema didn't, plus RLS/RPC fixes required for the
+storefront (which runs entirely as an anonymous Supabase user) to function at
+all.
+
+## Files changed
+
+| File | Change |
+|---|---|
+| `supabase/migrations/20260714120022_orders_phase_b_columns.sql` | **New.** Extends `order_status` (+preparing/ready_to_ship/out_for_delivery/refunded) and `payment_status` (+partial/partially_refunded) enums; relaxes `payment_method` to `text`; adds `customer_name`/`customer_email`/`customer_ref_id`/`customer_notes`/`discount_type`/`discount_value`/`shipping_company`/`tracking_number`/`courier_name`/`estimated_delivery_date`/`customer_update`/`customer_updated_at`/`billing_address`/`timeline`/`internal_notes` columns; adds `orders_insert_admin`/`order_items_insert_admin` RLS policies; adds `get_guest_order(p_order_number)` and `create_guest_order(p_order, p_items)` SECURITY DEFINER RPCs (guest read/write with **no** anon SELECT policy on either table); adds a `broadcast_order_change` trigger + `realtime.messages` policy for Broadcast-from-Database live tracking updates. See "Post-review security hardening" above. |
+| `supabase/migrations/20260714120023_coupons_phase_b_columns.sql` | **New.** Extends `coupon_type` (+shipping); relaxes `value` check to `>= 0`; adds `description`/`status`/`included_categories`/`excluded_categories`/`included_products`/`excluded_products` columns + `status`↔`is_active` sync trigger; adds `increment_coupon_usage(p_code, p_order_id)` security-definer RPC (guest-safe usage counting, gated on a real matching order — see hardening section). |
+| `src/lib/supabase/database.types.ts` | Hand-updated to match both migrations (enums, `orders`/`coupons` Row/Insert/Update, `get_guest_order`/`create_guest_order`/`increment_coupon_usage` RPC signatures). This file is hand-written, not generated — regenerate with `npx supabase gen types typescript --linked` once the project is linked, and reconcile against these edits. |
+| `src/lib/services/order.service.ts` | Rewritten: Supabase-backed `SupabaseOrderRepositoryImpl` replacing `MockOrderRepositoryImpl`. Same public API (`getOrders`, `getOrder`, `getOrderByNumber`, `createOrder`, `updateOrder`, `updateOrderStatus`, `cancelOrder`, `deleteOrder`, `deleteMultiple`, `updatePaymentStatus`, `addInternalNote`, `updateShipping`, `addCustomerUpdate`, `markAsPaidMultiple`). `createOrder`/`getOrderByNumber` go through the guest RPCs (see hardening section); everything else is direct table access under the caller's own (admin) RLS. Inventory deduction/restore, customer-stat recompute, notifications, and the admin timeline log all still fire the same way. |
+| `src/lib/services/coupon.service.ts` | Rewritten: same public API except `incrementUsage(code, orderId)` gained a required `orderId` param (security-driven, see hardening section). `calculateDiscount`/`incrementUsage` use a hybrid path — direct table read/write for admin sessions (full error detail), RPC fallback for guest/storefront sessions (RLS-safe, coarser error message). |
+| `src/lib/services/business.service.ts` | `getFinancialSummary()` now calls `OrderService.getOrders()` instead of reading the (now-permanently-empty) `mockOrders` array directly — this was a live regression the orders migration would otherwise have caused (dashboard revenue would silently go to zero). |
+| `src/app/checkout/page.tsx` | Removed a dead `window.addEventListener('storage', ...)` block that refreshed coupons from the old `aura_mock_db:coupons` localStorage key. Updated `CouponService.incrementUsage` call to pass the new order's id. |
+| `src/app/admin/(dashboard)/orders/page.tsx` | Admin "new order" form now actually sets `couponCode` on `CreateOrderInput` (pre-existing gap, see hardening section item 3) and passes the created order's id to `incrementUsage`. |
+| `src/app/tracking/page.tsx` | Added a Realtime **Broadcast** subscription (`order:<id>` topic, private channel) so an admin status change from a **different browser/device** now reaches an open tracking page live, without needing any anon SELECT policy. Previously "live" updates only worked within the same browser tab (in-process EventBus). |
+
+## Database tables / objects used
+
+- `orders`, `order_items` (existing tables, additive columns above)
+- `coupons` (existing table, additive columns above)
+- RPCs: `validate_coupon` (existing, unchanged), `increment_coupon_usage` (new, order-gated), `get_guest_order` (new), `create_guest_order` (new)
+- Realtime: Broadcast-from-Database trigger on `orders` (`order:<id>` topic) + `realtime.messages` RLS policy — no table-level Realtime publication needed
+
+## Schema issues found (and how each was resolved)
+
+1. **`order_status`/`payment_status` enums narrower than the app's model.** The app's canonical 9-status workflow (`src/lib/orders/order-status.ts`) had 4 values the DB didn't: `preparing`, `ready_to_ship`, `out_for_delivery`, `refunded`. Resolved by extending the enums (additive, no data migration needed — table was empty).
+2. **No columns for guest customer identity.** `orders` only had `phone` + `shipping_address` jsonb; every real order today is a guest order (no customer login exists), so `customer_name`/`customer_email` had nowhere to live. Added as columns.
+3. **No columns for a large slice of the admin order-detail feature set:** status `timeline`, `internal_notes`, shipping tracking fields, `customer_update` messages, `billing_address`. Added as columns/JSONB — same precedent as `products.costing`/`stats`/`revisions`.
+4. **`payment_method` enum didn't match reality.** The DB enum was `cash_on_delivery`/`card`/`wallet`; the checkout form actually sends `instapay`/`vodafone-cash` and the admin manual-order form defaults to `cod` — none of which are valid enum values. Relaxed the column to `text` (mirrors the mock's unconstrained `paymentMethod?: string`) rather than trying to enumerate every UI string.
+5. **`coupon_type` missing `'shipping'`.** The mock model supports a free-shipping coupon type (referenced in the customer profile page and `calculateDiscount`). Added to the enum.
+6. **`coupons.value > 0` constraint would reject a `type: 'shipping'` coupon left at 0** (its `value` is functionally unused — `calculateDiscount` always resolves shipping-type discount to 0). Relaxed to `>= 0`.
+7. **Admin can't insert orders/order_items for a walk-in customer.** The original insert policies only covered anon-guest and authenticated-self; an authenticated *admin* inserting an order with `user_id: null` on a customer's behalf had no matching policy. Added `orders_insert_admin`/`order_items_insert_admin`.
+8. **Critical: no SELECT policy for `anon` at all on `orders`/`order_items`.** The original RLS only granted SELECT to `authenticated` (self or admin). Since the entire storefront runs unauthenticated, `getOrders`/`getOrderByNumber` would have silently returned zero rows for every guest — breaking checkout confirmation, tracking, and the packing slip for all real traffic. **First fix attempt was itself a PII leak** (blanket `to anon using (user_id is null)` — see "Post-review security hardening" above); superseded by `get_guest_order`/`create_guest_order` SECURITY DEFINER RPCs. There is still no RLS policy granting `anon` direct SELECT on either table — all guest access is scoped, single-row, and order-number/order-id-gated through those two RPCs.
+9. **Coupon validation/redemption is RLS-blocked for guests.** `coupons` SELECT/UPDATE are admin-only by design (so coupon codes can't be enumerated). Storefront `calculateDiscount`/`incrementUsage` now use the existing `validate_coupon` RPC and the new `increment_coupon_usage(code, orderId)` RPC for guest callers; admin callers still get direct-table access with full per-reason error messages. **Trade-off:** guests get one consolidated "coupon invalid or not applicable" message instead of the mock's specific ones (already-used / expired / min-order-not-met) — this is a direct, unavoidable consequence of the existing "don't rewrite RBAC" constraint plus the coupon-enumeration protection already baked into the schema.
+10. **Order number format changes.** The mock generated `AURA-<seq>`; the DB has its own trigger-generated `ORD-000001` sequence. New orders from this migration onward will show `ORD-XXXXXX` instead of `AURA-XXXXX`. Kept the DB's own generator rather than duplicating a sequence client-side (would risk collisions under concurrent guest checkouts).
+11. **`fulfillmentStatus` has no column.** It's fully derived from `status` via the existing `fulfillmentForStatus()` helper — computed on every read instead of stored, which is strictly more consistent than the mock (which stored it and could theoretically drift).
+12. **Admin-created orders reference a mock `customerId` that isn't a real Supabase user.** Since `customers` is out of scope for this phase (still mock-backed), there's no `profiles` row to link to. Added a loose, non-FK `customer_ref_id text` column purely so `recomputeCustomerStats()` keeps working across an order's lifetime (status changes still update the right mock customer's totals) — never joined or used for access control.
+13. **`orders.phone` has a `^\+?[0-9]{8,15}$` check constraint the mock never enforced.** Checkout's own client-side validation (`/^01[0125][0-9]{8}$/`) already satisfies it, so storefront orders are unaffected. Admin-created orders pull `phone` from mock customer records of unknown format — sanitized (strip spaces/dashes) defensively in the service, but a genuinely malformed number will now surface as a DB error where the mock silently accepted it. Flagged, not loosened, since this is a pre-existing constraint outside this phase's scope.
+14. **Order deletion now requires `super_admin`** (`orders_delete_super_admin`, pre-existing policy, not something this migration added) — a regular admin's delete call will silently affect 0 rows. The mock had no such restriction. Not changed (touching RBAC is explicitly out of scope); `deleteOrder`/`deleteMultiple` now throw a clear error when this happens instead of silently no-op'ing.
+
+## Not done (by your explicit choice this session)
+
+- **Cart/Wishlist** (`StoreContext.tsx`) — left on `localStorage`, untouched. `cart_items`/`wishlist` RLS grants zero access to guests by design, and there is no customer-login system anywhere in the app to own a `user_id`. Revisit once customer accounts exist.
+- **Customer-account-linked order tracking** — tracking stays order-number-based (the number is the access token, same trust model the mock already had), not tied to a login. Real-time cross-device status push was added as a substitute for "immediately appear," without requiring accounts.
+- Everything outside Orders/Coupons/Cart/Wishlist (Products, Categories, Media, Authentication, RBAC, UI) — untouched, per the task brief.
+
+## Manual verification steps (you'll need to run these — migrations aren't applied yet)
+
+1. **Apply the migrations** against the linked Supabase project: `npx supabase link` (needs project ref + DB password) then `npx supabase db push`, or paste both new `.sql` files into the Supabase SQL editor in order (`...22` then `...23`).
+2. Regenerate/reconcile `database.types.ts`: `npx supabase gen types typescript --linked > src/lib/supabase/database.types.ts`, then diff against this session's hand-edits to make sure nothing was lost (the file was already being edited concurrently by another process during this session — see the `roles`/`profiles.username` additions that aren't part of this migration).
+3. **Orders — storefront:** add items to cart → checkout → confirm the order appears in `/admin/orders` immediately (EventBus) and persists after a full page reload (Supabase, not localStorage).
+4. **Orders — admin:** change an order's status through the full sequence (pending → confirmed → preparing → ready_to_ship → shipped → out_for_delivery → delivered) and confirm each new status persists, the timeline entries accumulate, and — once `delivered` — inventory deducts and customer stats recompute.
+5. **Orders — tracking:** open `/tracking?id=<order number>` in one browser and the matching `/admin/orders/[id]` in another; change status in admin and confirm the tracking page updates live without a manual refresh (Realtime Broadcast via the `order:<id>` channel — verify the `broadcast_order_change` trigger and `realtime.messages` policy actually applied, since this is unexercised code).
+6. **Orders — cross-session:** note an order number, close the browser entirely, reopen `/tracking`, look it up again — confirm it still resolves (proves it's server-side, not session-local).
+7. **Coupons — admin CRUD:** create, edit, duplicate, disable/enable, and delete a coupon in `/admin/coupons`; reload the page each time to confirm persistence.
+8. **Coupons — storefront redemption:** apply a coupon at checkout as a guest, confirm the discount computes correctly for both `percentage` and `fixed` types, complete the order, and confirm `usage_count` incremented (visible in `/admin/coupons`) and the coupon auto-disables once its `usage_limit` is hit.
+9. **Coupons — guest error messaging:** intentionally apply an invalid/expired code at checkout and confirm a (generic, per item #9 above) error message shows instead of the app crashing.
+10. Run `npx tsc --noEmit` (already clean as of this report) and `npm run build` (already passing) again after any further changes.
+
+## Rollback instructions
+
+1. `git checkout -- src/lib/services/order.service.ts src/lib/services/coupon.service.ts src/lib/services/business.service.ts src/app/checkout/page.tsx src/app/tracking/page.tsx src/app/admin/'(dashboard)'/orders/page.tsx src/lib/supabase/database.types.ts`
+2. Delete the two new migration files (safe — they were never applied to any live database in this session).
+3. No data migration/backfill was performed (the tables were empty), so there's nothing to reverse on the DB side beyond dropping the added columns/policies/enum values/RPCs if the migrations *were* applied — `alter type ... add value` can't be un-added without recreating the enum type, so if you do apply and then need to roll back, recreate `order_status`/`payment_status`/`coupon_type` from scratch rather than trying to drop individual values.

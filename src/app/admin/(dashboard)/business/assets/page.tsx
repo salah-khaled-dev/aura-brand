@@ -2,8 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { create } from 'zustand';
-import { businessService } from '@/lib/services/business.service';
-import { Asset } from '@/data/mock/business';
+import { businessService, Asset } from '@/lib/services/business.service';
 import { formatCurrency } from '@/lib/utils/formatters';
 import { DataTable } from '@/components/admin/design-system/DataTable';
 import { adminAr } from '@/lib/i18n/admin-ar';
@@ -56,7 +55,7 @@ export default function AssetsPage() {
     if (editingAsset) {
       await businessService.updateAsset(editingAsset.id, assetData);
       toast.success('تم التعديل بنجاح', {
-        action: { label: 'تراجع', onClick: () => businessService.updateAsset(editingAsset.id, editingAsset).then(fetchData) }
+        action: { label: 'تراجع', onClick: () => businessService.updateAsset(editingAsset.id, editingAsset).then(fetchData).catch(() => toast.error('فشل التراجع')) }
       });
     } else {
       await businessService.createAsset(assetData);

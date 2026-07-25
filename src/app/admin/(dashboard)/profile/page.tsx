@@ -2,8 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { adminAr } from '@/lib/i18n/admin-ar';
-import { ProfileService } from '@/lib/services/profile.service';
-import { Profile } from '@/data/mock/profile';
+import { ProfileService, Profile } from '@/lib/services/profile.service';
 import { AuthService } from '@/lib/services/auth.service';
 import { usePermissions } from '@/lib/auth/PermissionContext';
 import { UsersService, MockStaffMember, MockRole, PERMISSION_MODULES_AR } from '@/lib/services/users.service';

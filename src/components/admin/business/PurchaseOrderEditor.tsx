@@ -3,8 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { IconDeviceFloppy as Save, IconArrowRight as ArrowRight, IconShoppingCart as ShoppingCart, IconCurrencyDollar as DollarSign, IconCalendar as Calendar, IconFileText as FileText, IconPlus as Plus, IconTrash as Trash2 } from '@tabler/icons-react';
-import { PurchaseOrder, Supplier } from '@/data/mock/business';
-import { businessService } from '@/lib/services/business.service';
+import { businessService, PurchaseOrder, Supplier } from '@/lib/services/business.service';
 import { ProductService } from '@/lib/services/product.service';
 import { formatCurrency } from '@/lib/utils/formatters';
 import { toast } from 'sonner';
@@ -22,7 +21,7 @@ export function PurchaseOrderEditor({ id }: PurchaseOrderEditorProps) {
   const [isReceiving, setIsReceiving] = useState(false);
   const [formData, setFormData] = useState<Omit<PurchaseOrder, 'id'>>({
     supplierId: '',
-    reference: `PO-${Math.floor(Math.random() * 10000)}`,
+    reference: `PO-${Date.now().toString(36).toUpperCase()}`,
     date: new Date().toISOString().split('T')[0],
     expectedArrival: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     items: [],
@@ -39,22 +38,24 @@ export function PurchaseOrderEditor({ id }: PurchaseOrderEditorProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    businessService.getSuppliers().then(setSuppliers);
-    ProductService.getProducts().then(list =>
-      setProducts(list.map(p => ({ id: p.id, name: p.name, sku: p.sku, costPrice: p.costPrice ?? 0 })))
-    );
+    businessService.getSuppliers().then(setSuppliers).catch(() => toast.error('فشل تحميل الموردين'));
+    ProductService.getProducts()
+      .then(list => setProducts(list.map(p => ({ id: p.id, name: p.name, sku: p.sku, costPrice: p.costPrice ?? 0 }))))
+      .catch(() => toast.error('فشل تحميل المنتجات'));
 
     if (!isNew && id) {
-      businessService.getPurchaseOrders().then(orders => {
-        const order = orders.find(o => o.id === id);
-        if (order) {
-          setFormData(order);
-        } else {
-          toast.error('أمر الشراء غير موجود');
-          router.push('/admin/business/purchase-orders');
-        }
-        setIsLoading(false);
-      });
+      businessService.getPurchaseOrders()
+        .then(orders => {
+          const order = orders.find(o => o.id === id);
+          if (order) {
+            setFormData(order);
+          } else {
+            toast.error('أمر الشراء غير موجود');
+            router.push('/admin/business/purchase-orders');
+          }
+        })
+        .catch(() => toast.error('فشل تحميل أمر الشراء'))
+        .finally(() => setIsLoading(false));
     } else {
       setIsLoading(false);
     }

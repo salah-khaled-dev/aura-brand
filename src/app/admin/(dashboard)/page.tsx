@@ -18,13 +18,12 @@ import { DataTable } from "@/components/admin/design-system/DataTable";
 import { Badge } from "@/components/admin/design-system/Badge";
 import { Button } from "@/components/admin/design-system/Button";
 import { RevenueChart } from "@/components/admin/charts/RevenueChart";
-import { AnalyticsService } from "@/lib/services/analytics.service";
+import { AnalyticsService, AnalyticsSummary, RevenueData } from "@/lib/services/analytics.service";
 import { OrderService } from "@/lib/services/order.service";
 import { CustomerService } from "@/lib/services/customer.service";
 import { ProductService } from "@/lib/services/product.service";
 import { businessService } from "@/lib/services/business.service";
 import { getStatusMeta } from "@/lib/orders/order-status";
-import { AnalyticsSummary, RevenueData } from "@/data/mock/analytics";
 import { toast } from "sonner";
 import { adminAr } from "@/lib/i18n/admin-ar";
 import { formatCurrency, formatNumber } from "@/lib/utils/formatters";
@@ -42,15 +41,16 @@ export default function DashboardHome() {
 
   const load = useCallback(async () => {
       try {
-        const [sum, rev, orders, customers, products, reviews, coupons, finance] = await Promise.all([
-          AnalyticsService.getSummary(),
-          AnalyticsService.getRevenueData("month"),
-          OrderService.getOrders(),
-          CustomerService.getCustomers(),
-          ProductService.getProducts(),
-          import("@/lib/services/review.service").then(m => m.ReviewService.getReviews()),
-          import("@/lib/services/coupon.service").then(m => m.CouponService.getCoupons()),
-          businessService.getFinancialSummary(),
+        const [sum, rev, orders, customers, products, reviews, coupons, finance, lowStockProducts] = await Promise.all([
+          AnalyticsService.getSummary().catch(err => { console.error('[summary]', err); throw err; }),
+          AnalyticsService.getRevenueData("month").catch(err => { console.error('[revenue]', err); throw err; }),
+          OrderService.getOrders().catch(err => { console.error('[orders]', err); throw err; }),
+          CustomerService.getCustomers().catch(err => { console.error('[customers]', err); throw err; }),
+          ProductService.getProducts().catch(err => { console.error('[products]', err); throw err; }),
+          import("@/lib/services/review.service").then(m => m.ReviewService.getReviews()).catch(err => { console.error('[reviews]', err); throw err; }),
+          import("@/lib/services/coupon.service").then(m => m.CouponService.getCoupons()).catch(err => { console.error('[coupons]', err); throw err; }),
+          businessService.getFinancialSummary().catch(err => { console.error('[finance]', err); throw err; }),
+          ProductService.getLowStockProducts(5).catch(err => { console.error('[lowStock]', err); throw err; }),
         ]);
 
         const totalRevenue = orders.reduce(
@@ -68,11 +68,6 @@ export default function DashboardHome() {
           totalRevenue,
           totalOrders: orders.length,
           totalCustomers: customers.length,
-          conversionRate: 2.4,
-          revenueGrowth: "+12.5%",
-          ordersGrowth: "+8.2%",
-          customersGrowth: "+5.4%",
-          conversionGrowth: "+1.1%",
           pendingReviews: reviews.filter((r: any) => r.status === "pending").length,
           activeCoupons: coupons.filter((c: any) => c.status === "active").length,
           pendingOrders,
@@ -94,8 +89,9 @@ export default function DashboardHome() {
           (a, b) => new Date(b.registrationDate ?? b.createdAt).getTime() - new Date(a.registrationDate ?? a.createdAt).getTime()
         );
         setLatestCustomers(sorted.slice(0, 5));
-        setLowStock(products.filter((p: any) => (p.stock ?? 0) < 10).slice(0, 5));
-      } catch {
+        setLowStock(lowStockProducts);
+      } catch (err) {
+        console.error('[dashboard] load failed:', err);
         toast.error(adminAr.toasts.unexpectedError);
       } finally {
         setLoading(false);
@@ -155,28 +151,28 @@ export default function DashboardHome() {
             title={adminAr.dashboard.totalRevenue}
             value={formatCurrency(summary.totalRevenue)}
             icon={<IconCurrencyDollar stroke={2} />}
-            trend={{ value: 12.5, label: adminAr.dashboard.vsLastMonth, isPositive: true }}
+            trend={{ value: Math.abs(summary.revenueGrowth ?? 0), label: adminAr.dashboard.vsLastMonth, isPositive: (summary.revenueGrowth ?? 0) >= 0 }}
             accentColor="purple"
           />
           <KpiCard
             title={adminAr.dashboard.totalOrders}
             value={formatNumber(summary.totalOrders)}
             icon={<IconShoppingCart stroke={2} />}
-            trend={{ value: 8.2, label: adminAr.dashboard.vsLastMonth, isPositive: true }}
+            trend={{ value: Math.abs(summary.ordersGrowth ?? 0), label: adminAr.dashboard.vsLastMonth, isPositive: (summary.ordersGrowth ?? 0) >= 0 }}
             accentColor="blue"
           />
           <KpiCard
             title={adminAr.dashboard.totalCustomers}
             value={formatNumber(summary.totalCustomers)}
             icon={<IconUsers stroke={2} />}
-            trend={{ value: 5.4, label: adminAr.dashboard.vsLastMonth, isPositive: true }}
+            trend={{ value: Math.abs(summary.customersGrowth ?? 0), label: adminAr.dashboard.vsLastMonth, isPositive: (summary.customersGrowth ?? 0) >= 0 }}
             accentColor="emerald"
           />
           <KpiCard
             title="نسبة التحويل"
             value={`${summary.conversionRate}%`}
             icon={<IconTrendingUp stroke={2} />}
-            trend={{ value: 1.1, label: adminAr.dashboard.vsLastMonth, isPositive: true }}
+            trend={{ value: Math.abs(summary.conversionGrowth ?? 0), label: adminAr.dashboard.vsLastMonth, isPositive: (summary.conversionGrowth ?? 0) >= 0 }}
             accentColor="cyan"
           />
         </div>
@@ -197,7 +193,7 @@ export default function DashboardHome() {
             title="طلبات مكتملة"
             value={formatNumber(s.completedOrders ?? 0)}
             icon={<IconCheck stroke={2} />}
-            trend={{ value: 15, label: adminAr.dashboard.vsLastMonth, isPositive: true }}
+            trend={{ value: 0, label: "من إجمالي الطلبات", isPositive: true }}
             accentColor="emerald"
           />
           <KpiCard
@@ -211,7 +207,7 @@ export default function DashboardHome() {
             title="قيمة المخزون"
             value={formatCurrency(s.inventoryValue ?? 0)}
             icon={<IconPackage stroke={2} />}
-            trend={{ value: 3, label: adminAr.dashboard.vsLastMonth, isPositive: true }}
+            trend={{ value: 0, label: "القيمة الحالية للمخزون", isPositive: true }}
             accentColor="indigo"
           />
         </div>
@@ -268,14 +264,14 @@ export default function DashboardHome() {
               title="صافي الربح"
               value={formatCurrency(financeSummary.netProfit ?? 0)}
               icon={<IconTrendingUp stroke={2} />}
-              trend={{ value: 18, label: adminAr.dashboard.vsLastMonth, isPositive: true }}
+              trend={{ value: 0, label: "الشهر الحالي", isPositive: (financeSummary.netProfit ?? 0) >= 0 }}
               accentColor="emerald"
             />
             <KpiCard
               title="إجمالي المصروفات"
               value={formatCurrency(financeSummary.totalExpenses ?? 0)}
               icon={<IconReceipt2 stroke={2} />}
-              trend={{ value: 2, label: adminAr.dashboard.vsLastMonth, isPositive: true }}
+              trend={{ value: 0, label: "الشهر الحالي", isPositive: false }}
               accentColor="pink"
             />
             <KpiCard
@@ -289,7 +285,7 @@ export default function DashboardHome() {
               title="التدفق النقدي"
               value={formatCurrency(financeSummary.cashFlow ?? 0)}
               icon={<IconWallet stroke={2} />}
-              trend={{ value: 8, label: adminAr.dashboard.vsLastMonth, isPositive: true }}
+              trend={{ value: 0, label: "الشهر الحالي", isPositive: (financeSummary.cashFlow ?? 0) >= 0 }}
               accentColor="blue"
             />
           </div>

@@ -1,0 +1,44 @@
+[
+  {
+    "id": "cat_winter",
+    "name": "أزياء الشتاء",
+    "slug": "winter",
+    "description": "تشكيلة الشتاء الفاخرة — دفء وأناقة في تصاميم شتوية راقية.",
+    "thumbnail": "/images/campaign/campaign_3.png",
+    "banner": "/images/campaign/campaign_3.png",
+    "isFeatured": true,
+    "showOnHomepage": true,
+    "showInMenu": true,
+    "sortOrder": 1,
+    "status": "active",
+    "seo": { "title": "أزياء الشتاء | AURA", "description": "تسوقي أحدث تشكيلة الشتاء من دار أورا." }
+  },
+  {
+    "id": "cat_summer",
+    "name": "أزياء الصيف",
+    "slug": "summer",
+    "description": "أزياء الصيف المنعشة — تصاميم صيفية حصرية بأقمشة خفيفة.",
+    "thumbnail": "/images/campaign/campaign_2.png",
+    "banner": "/images/campaign/campaign_2.png",
+    "isFeatured": true,
+    "showOnHomepage": true,
+    "showInMenu": true,
+    "sortOrder": 2,
+    "status": "active",
+    "seo": { "title": "أزياء الصيف | AURA", "description": "تسوقي أحدث تشكيلة الصيف من دار أورا." }
+  },
+  {
+    "id": "cat_shop",
+    "name": "المتجر",
+    "slug": "shop",
+    "description": "كل قطع دار أورا في مكان واحد.",
+    "thumbnail": "/images/campaign/campaign_1.png",
+    "banner": "/images/campaign/campaign_1.png",
+    "isFeatured": false,
+    "showOnHomepage": true,
+    "showInMenu": true,
+    "sortOrder": 3,
+    "status": "active",
+    "seo": { "title": "المتجر | AURA", "description": "تصفحي كل تشكيلات دار أورا." }
+  }
+]

@@ -84,7 +84,7 @@ function resolveTestimonials(
 }
 
 export default function HomePage() {
-  const products = useStorefrontProducts();
+  const { products } = useStorefrontProducts();
   // Seeded synchronously from the mock store (already loaded at import time) so the
   // homepage never paints empty and then pops in its entire content — that gap was
   // the dominant cause of a very high CLS score.
@@ -95,6 +95,10 @@ export default function HomePage() {
   });
   const [newsletterEmail, setNewsletterEmail] = useState('');
   const [newsletterSubmitted, setNewsletterSubmitted] = useState(false);
+
+  useEffect(() => {
+    HomepageService.getSections().then(setSections).catch(console.error);
+  }, []);
 
   useEventSubscribeMany(['website.changed'], () => {
     HomepageService.getSections().then(setSections).catch(() => {});

@@ -1,11 +1,14 @@
 import type { Metadata } from 'next';
 import { SEOService, SEOPage } from '@/lib/services/storefront/seo.service';
+import { SITE_URL } from '@/lib/constants/site';
 
 export async function generatePageMetadata(
   pageKey: SEOPage,
   defaultTitle: string,
   defaultDesc: string
 ): Promise<Metadata> {
+  const canonicalPath = pageKey === 'homepage' ? '' : `/${pageKey}`;
+
   try {
     const seo = await SEOService.getByPage(pageKey);
     const global = await SEOService.getByPage('global');
@@ -16,16 +19,20 @@ export async function generatePageMetadata(
     const robots = seo?.robots || global?.robots || 'index, follow';
     const ogImage = seo?.ogImage || global?.ogImage || '/aura_thumbnail.png';
     const twitterCard = seo?.twitterCard || global?.twitterCard || 'summary_large_image';
+    const canonical = seo?.canonical || `${SITE_URL}${canonicalPath}`;
 
     return {
       title,
       description,
       keywords: keywords.split(',').map((k) => k.trim()).filter(Boolean),
       robots,
+      alternates: {
+        canonical,
+      },
       openGraph: {
         title,
         description,
-        url: seo?.canonical || `https://aura-fashion-virid.vercel.app/${pageKey === 'homepage' ? '' : pageKey}`,
+        url: canonical,
         siteName: 'AURA',
         images: [
           {
@@ -49,6 +56,9 @@ export async function generatePageMetadata(
     return {
       title: defaultTitle,
       description: defaultDesc,
+      alternates: {
+        canonical: `${SITE_URL}${canonicalPath}`,
+      },
     };
   }
 }

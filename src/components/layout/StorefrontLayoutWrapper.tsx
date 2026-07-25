@@ -16,8 +16,9 @@ const Footer = dynamic(() => import("@/components/layout/Footer"), { ssr: true }
 export function StorefrontLayoutWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isAdmin = pathname?.startsWith('/admin');
+  const isMaintenance = pathname === '/maintenance';
 
-  if (isAdmin) {
+  if (isAdmin || isMaintenance) {
     return <>{children}</>;
   }
 

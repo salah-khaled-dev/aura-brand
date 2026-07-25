@@ -7,15 +7,16 @@ import { useStore } from "@/context/StoreContext";
 import { useNotification } from "@/context/NotificationContext";
 import { CouponService } from "@/lib/services/coupon.service";
 import { OrderService } from "@/lib/services/order.service";
+import { StoreService } from "@/lib/services/storefront/store.service";
+import { downloadInvoicePdf } from "@/lib/pdf/generate-invoice-pdf";
+import type { Order } from "@/data/mock/orders";
 import { LuxuryInput, LuxurySelect } from "@/components/ui/Form";
 import Button from "@/components/ui/Button";
-import { analytics } from "@/utils/analytics";
-import { IconCircleCheck as CheckCircle, IconTruck as Truck, IconShieldExclamation as ShieldAlert, IconLoader2 as Loader2, IconArrowLeft as ArrowLeft, IconArrowRight as ArrowRight, IconPackage as Package } from "@tabler/icons-react";
+import { IconCircleCheck as CheckCircle, IconTruck as Truck, IconShieldExclamation as ShieldAlert, IconLoader2 as Loader2, IconArrowLeft as ArrowLeft, IconArrowRight as ArrowRight, IconPackage as Package, IconDownload, IconCopy } from "@tabler/icons-react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { fadeIn, slideInRight, scaleIn } from "@/lib/animations";
 import { eventBus } from "@/lib/events/EventBus";
-import { refreshFromStorage as refreshCouponsFromStorage } from "@/data/mock/coupons";
 
 export default function CheckoutPage() {
   const { showNotification } = useNotification();
@@ -26,6 +27,9 @@ export default function CheckoutPage() {
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [generatedOrderId, setGeneratedOrderId] = useState("");
+  const [createdOrder, setCreatedOrder] = useState<Order | null>(null);
+  const [downloadingInvoice, setDownloadingInvoice] = useState(false);
+  const [orderNumberCopied, setOrderNumberCopied] = useState(false);
   // Snapshot of totals captured at submit (cart is cleared on success).
   const [submittedTotals, setSubmittedTotals] = useState<{ subtotal: number; discount: number; total: number; couponCode: string | null } | null>(null);
 
@@ -52,21 +56,6 @@ export default function CheckoutPage() {
   const discount = appliedCoupon?.discount ?? 0;
   const cartTotal = Math.max(0, cartSubtotal - discount);
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'aura_mock_db:coupons') {
-        if (refreshCouponsFromStorage()) {
-          eventBus.emit('coupon.changed');
-        }
-      }
-    };
-    window.addEventListener('storage', handleStorageChange);
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-    };
-  }, []);
-
   // Re-validate the applied coupon whenever the cart subtotal changes (e.g. min-order no longer met).
   useEffect(() => {
     if (!appliedCoupon) return;
@@ -85,7 +74,7 @@ export default function CheckoutPage() {
           discountValue: appliedCoupon.discountValue
         });
       }
-    });
+    }).catch(console.error);
     return () => { active = false; };
   }, [cartSubtotal]);
 
@@ -93,18 +82,22 @@ export default function CheckoutPage() {
   useEffect(() => {
     if (!appliedCoupon) return;
     const handleCouponChange = async () => {
-      const res = await CouponService.calculateDiscount(appliedCoupon.code, cartSubtotal);
-      if (!res.valid) {
-        setAppliedCoupon(null);
-        setCouponError(res.error || "تم إيقاف الكوبون من الإدارة");
-      } else {
-        setAppliedCoupon({
-          id: res.coupon!.id,
-          code: res.coupon!.code,
-          discount: res.discountAmount,
-          type: res.coupon!.type,
-          discountValue: res.coupon!.discountValue
-        });
+      try {
+        const res = await CouponService.calculateDiscount(appliedCoupon.code, cartSubtotal);
+        if (!res.valid) {
+          setAppliedCoupon(null);
+          setCouponError(res.error || "تم إيقاف الكوبون من الإدارة");
+        } else {
+          setAppliedCoupon({
+            id: res.coupon!.id,
+            code: res.coupon!.code,
+            discount: res.discountAmount,
+            type: res.coupon!.type,
+            discountValue: res.coupon!.discountValue
+          });
+        }
+      } catch (err) {
+        console.error(err);
       }
     };
 
@@ -157,13 +150,6 @@ export default function CheckoutPage() {
     setCouponInput("");
     setCouponError("");
   };
-
-  // Trigger Checkout Start Analytics
-  useEffect(() => {
-    if (cart.length > 0) {
-      analytics.trackCheckoutStart(cart.length, cartSubtotal);
-    }
-  }, [cart.length, cartSubtotal]);
 
   const governorateOptions = [
     { value: "cairo", label: "القاهرة" },
@@ -247,7 +233,7 @@ export default function CheckoutPage() {
 
     try {
       // Create the order through the SAME unified OrderService the admin uses, so it
-      // persists in mockStorage and appears live in Admin → Orders via the EventBus.
+      // persists in Supabase and appears live in Admin → Orders via the EventBus.
       const created = await OrderService.createOrder({
         customerId: "",
         customerName: `${form.firstName} ${form.lastName}`.trim(),
@@ -277,26 +263,52 @@ export default function CheckoutPage() {
       });
 
       setGeneratedOrderId(created.orderNumber);
+      setCreatedOrder(created);
       setSubmittedTotals({ subtotal: cartSubtotal, discount, total: cartTotal, couponCode: appliedCoupon?.code ?? null });
 
-      // Remember the latest order number so the tracking page can preload it.
+      // Remember the latest order number (and the contact used to place it) so
+      // the tracking page can preload it without asking the customer to
+      // re-type their phone/email as a second factor (see get_guest_order in
+      // 20260715000007_harden_guest_checkout_and_coupons.sql).
       localStorage.setItem("aura_last_order_id", created.orderNumber);
+      localStorage.setItem("aura_last_order_contact", form.phone.trim() || form.email.trim());
 
       // Record coupon redemption through the shared service (auto-disables at limit,
       // emits coupon.used → admin coupon list updates live).
       if (appliedCoupon) {
-        await CouponService.incrementUsage(appliedCoupon.code);
+        await CouponService.incrementUsage(appliedCoupon.code, created.id);
       }
-
-      analytics.trackPurchaseSuccess(created.orderNumber, cart, cartTotal, form.paymentMethod);
 
       setStep(4);
       clearCart();
-      showNotification("تم إرسال طلبكِ إلى مستشارة AURA بنجاح", "success");
+      showNotification("تم إنشاء طلبك بنجاح. يمكنك الآن تحميل الفاتورة أو تتبع طلبك.", "success");
     } catch {
       showNotification("تعذر إرسال الطلب، يرجى المحاولة مرة أخرى", "error");
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleDownloadInvoice = async () => {
+    if (!createdOrder) return;
+    setDownloadingInvoice(true);
+    try {
+      const storeInfo = await StoreService.getInfo();
+      await downloadInvoicePdf(createdOrder, storeInfo);
+    } catch {
+      showNotification("تعذر تحميل الفاتورة، يرجى المحاولة مرة أخرى", "error");
+    } finally {
+      setDownloadingInvoice(false);
+    }
+  };
+
+  const handleCopyOrderNumber = async () => {
+    try {
+      await navigator.clipboard.writeText(generatedOrderId);
+      setOrderNumberCopied(true);
+      setTimeout(() => setOrderNumberCopied(false), 2000);
+    } catch {
+      showNotification("تعذر نسخ رقم الطلب", "error");
     }
   };
 
@@ -564,9 +576,26 @@ export default function CheckoutPage() {
 
                 {/* Details summary */}
                 <div className="w-full max-w-[500px] bg-background-primary border border-brand-border p-5 text-right flex flex-col gap-3 text-xs font-sans mt-2" dir="rtl">
-                  <div className="flex justify-between border-b border-brand-border/60 pb-2 font-bold">
+                  <div className="flex justify-between items-center border-b border-brand-border/60 pb-2 font-bold">
                     <span>رقم طلب المراجعة:</span>
-                    <span className="text-accent text-sm font-display font-bold">{generatedOrderId}</span>
+                    <span className="flex items-center gap-2">
+                      <span className="text-accent text-sm font-display font-bold">{generatedOrderId}</span>
+                      <button
+                        type="button"
+                        onClick={handleCopyOrderNumber}
+                        className="text-text-secondary hover:text-accent transition-colors"
+                        aria-label="نسخ رقم الطلب"
+                      >
+                        <IconCopy className="w-3.5 h-3.5" />
+                      </button>
+                      {orderNumberCopied && <span className="text-[9px] text-accent">تم النسخ</span>}
+                    </span>
+                  </div>
+                  <div className="flex justify-between border-b border-brand-border/40 pb-2">
+                    <span>رقم التتبع:</span>
+                    <span dir="ltr">
+                      {createdOrder?.trackingNumber || "سيظهر رقم التتبع بمجرد شحن الطلب"}
+                    </span>
                   </div>
                   <div className="flex justify-between border-b border-brand-border/40 pb-2">
                     <span>المستلم:</span>
@@ -598,15 +627,23 @@ export default function CheckoutPage() {
 
                 <div className="flex flex-col sm:flex-row gap-3 mt-4 w-full max-w-[400px]">
                   <button
-                    onClick={() => router.push(`/tracking?id=${generatedOrderId}`)}
+                    onClick={handleDownloadInvoice}
+                    disabled={downloadingInvoice || !createdOrder}
+                    className="inline-flex items-center justify-center gap-2 border border-text-primary text-text-primary font-sans text-xs min-h-[44px] hover:bg-text-primary hover:text-background-secondary transition-colors flex-grow cursor-pointer disabled:opacity-60"
+                  >
+                    <IconDownload className="w-4 h-4" />
+                    {downloadingInvoice ? "جاري التحميل..." : "تحميل الفاتورة PDF"}
+                  </button>
+                  <button
+                    onClick={() => router.push(`/tracking?order=${generatedOrderId}`)}
                     className="inline-flex items-center justify-center bg-text-primary text-background-secondary font-sans text-xs min-h-[44px] hover:bg-accent transition-colors flex-grow cursor-pointer"
                   >
                     متابعة طلب المراجعة
                   </button>
-                  <Link href="/shop" className="flex-grow">
-                    <Button variant="secondary" className="w-full">مواصلة التسوق</Button>
-                  </Link>
                 </div>
+                <Link href="/shop" className="w-full max-w-[400px]">
+                  <Button variant="secondary" className="w-full">مواصلة التسوق</Button>
+                </Link>
               </motion.div>
             )}
 

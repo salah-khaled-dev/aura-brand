@@ -2,8 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { create } from 'zustand';
-import { businessService } from '@/lib/services/business.service';
-import { Liability } from '@/data/mock/business';
+import { businessService, Liability } from '@/lib/services/business.service';
 import { formatCurrency } from '@/lib/utils/formatters';
 import { DataTable } from '@/components/admin/design-system/DataTable';
 import { adminAr } from '@/lib/i18n/admin-ar';
@@ -55,7 +54,7 @@ export default function LiabilitiesPage() {
     if (editingLiability) {
       await businessService.updateLiability(editingLiability.id, liabilityData);
       toast.success('تم التعديل بنجاح', {
-        action: { label: 'تراجع', onClick: () => businessService.updateLiability(editingLiability.id, editingLiability).then(fetchData) }
+        action: { label: 'تراجع', onClick: () => businessService.updateLiability(editingLiability.id, editingLiability).then(fetchData).catch(() => toast.error('فشل التراجع')) }
       });
     } else {
       await businessService.createLiability({ ...liabilityData, status: 'unpaid' });

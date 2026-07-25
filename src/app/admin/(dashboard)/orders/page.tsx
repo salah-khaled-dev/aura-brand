@@ -120,6 +120,7 @@ export default function OrdersPage() {
         customerPhone: customer.phone,
         shippingAddress: form.shippingAddress,
         discount: appliedCode ? couponDiscount : 0,
+        couponCode: appliedCode,
         items: lines.map(l => {
           const p = prodList.find(pr => pr.id === l.productId)!;
           return { productId: p.id, productName: p.name, sku: p.sku, quantity: l.quantity, price: p.price };
@@ -127,7 +128,7 @@ export default function OrdersPage() {
       };
       const created = await OrderService.createOrder(input);
       // Record coupon redemption (auto-disables at limit; emits coupon.used → coupons list live-updates).
-      if (appliedCode) await CouponService.incrementUsage(appliedCode);
+      if (appliedCode) await CouponService.incrementUsage(appliedCode, created.id);
       toast.success(`تم إنشاء الطلب ${created.orderNumber}`);
       setCreateOpen(false);
       loadOrders();

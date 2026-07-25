@@ -2,8 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { create } from 'zustand';
-import { businessService } from '@/lib/services/business.service';
-import { PurchaseOrder } from '@/data/mock/business';
+import { businessService, PurchaseOrder } from '@/lib/services/business.service';
 import { formatCurrency } from '@/lib/utils/formatters';
 import { DataTable } from '@/components/admin/design-system/DataTable';
 import { adminAr } from '@/lib/i18n/admin-ar';

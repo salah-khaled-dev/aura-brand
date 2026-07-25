@@ -1,12 +1,11 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { CustomerService } from '@/lib/services/customer.service';
+import React, { useState, useEffect, useCallback, use } from 'react';
 import { OrderService } from '@/lib/services/order.service';
 import { ProductService } from '@/lib/services/product.service';
 import { ReviewService } from '@/lib/services/review.service';
 import { CouponService } from '@/lib/services/coupon.service';
-import { Customer, CustomerStatus, CustomerAddress } from '@/data/mock/customers';
+import { CustomerService, Customer, CustomerStatus, CustomerAddress } from '@/lib/services/customer.service';
 import { Order } from '@/data/mock/orders';
 import { Modal } from '@/components/admin/design-system/Modal';
 import { useEventSubscribeMany } from '@/hooks/useEventBus';
@@ -40,7 +39,8 @@ import {
   IconFileText 
 } from '@tabler/icons-react';
 
-export default function CustomerDetailsPage({ params }: { params: { id: string } }) {
+export default function CustomerDetailsPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id: customerId } = use(params);
   const router = useRouter();
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
@@ -102,13 +102,13 @@ export default function CustomerDetailsPage({ params }: { params: { id: string }
   }, []);
 
   useEffect(() => {
-    if (params.id) {
-      loadCustomerData(params.id);
+    if (customerId) {
+      loadCustomerData(customerId);
     }
-  }, [params.id, loadCustomerData]);
+  }, [customerId, loadCustomerData]);
 
   // Live refresh when this customer (or their orders) change anywhere in the app.
-  useEventSubscribeMany(REFRESH_EVENTS.customers, () => { if (params.id) loadCustomerData(params.id); });
+  useEventSubscribeMany(REFRESH_EVENTS.customers, () => { if (customerId) loadCustomerData(customerId); });
 
   const openEditProfile = () => {
     if (!customer) return;

@@ -1,0 +1,18 @@
+-- No product seed data exists in source control to snapshot.
+--
+-- src/data/products.ts's `storefrontSeed` — the ONLY source the mock catalog
+-- is built from (src/data/mock/products.ts: `catalogSeed = storefrontSeed.map(seedToProduct)`)
+-- — is an intentionally EMPTY array:
+--
+--   export const storefrontSeed: StorefrontSeedInput[] = [];
+--
+-- Any products visible in the admin/storefront today were created at runtime
+-- through the admin UI and persisted only to a specific browser's
+-- localStorage (key "aura_mock_db:products"). That data is NOT in this repo
+-- and cannot be captured by a static backup file — if real product data
+-- needs to be preserved, export it from that browser's localStorage
+-- (Application tab > Local Storage > aura_mock_db:products) BEFORE running
+-- scripts/migrate-catalog.mjs, and feed it into the migration script
+-- manually (see MIGRATION_MAP.md).
+--
+-- This file is a placeholder / template for future manual seeding.

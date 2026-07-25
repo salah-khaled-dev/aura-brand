@@ -2,8 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { adminAr } from '@/lib/i18n/admin-ar';
-import { AnalyticsService } from '@/lib/services/analytics.service';
-import { AnalyticsSummary, RevenueData, TopProduct, DeviceData } from '@/data/mock/analytics';
+import { AnalyticsService, AnalyticsSummary, RevenueData, TopProduct, DeviceData } from '@/lib/services/analytics.service';
 import { formatCurrency } from '@/lib/utils/formatters';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
 

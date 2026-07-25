@@ -2,8 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { create } from 'zustand';
-import { businessService } from '@/lib/services/business.service';
-import { Expense } from '@/data/mock/business';
+import { businessService, Expense } from '@/lib/services/business.service';
 import { DataTable } from '@/components/admin/design-system/DataTable';
 import { adminAr } from '@/lib/i18n/admin-ar';
 import { useEventSubscribeMany } from '@/hooks/useEventBus';
@@ -54,7 +53,7 @@ export default function ManufacturingCostsPage() {
     if (editingExpense) {
       await businessService.updateExpense(editingExpense.id, expenseData);
       toast.success(adminAr.toasts.dataSaved, {
-        action: { label: 'تراجع', onClick: () => businessService.updateExpense(editingExpense.id, editingExpense).then(fetchData) }
+        action: { label: 'تراجع', onClick: () => businessService.updateExpense(editingExpense.id, editingExpense).then(fetchData).catch(() => toast.error('فشل التراجع')) }
       });
     } else {
       await businessService.createExpense({ ...expenseData, category: 'manufacturing' });

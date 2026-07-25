@@ -29,6 +29,16 @@ export interface GroupedSearchResults {
   cms: SearchResultItem[];
 }
 
+/** Resolves a search category to its results, or `[]` if that category's fetch fails — one broken category shouldn't blank out the rest. */
+async function settleOrEmpty<T>(promise: Promise<T[]>): Promise<T[]> {
+  try {
+    return await promise;
+  } catch (err) {
+    console.error('SearchService.globalSearch: a category failed', err);
+    return [];
+  }
+}
+
 export const SearchService = {
   async globalSearch(query: string): Promise<GroupedSearchResults> {
     if (!query || query.trim().length < 2) {
@@ -40,20 +50,18 @@ export const SearchService = {
 
     const q = query.toLowerCase().trim();
 
-    // Fire all searches in parallel (mimicking microservices / fast RPC)
-    const [
-      products, orders, customers, categories, collections, 
-      coupons, articles, reviews, media
-    ] = await Promise.all([
-      ProductService.getProducts(), // Could pass { search: q } if implemented
-      OrderService.getOrders(),
-      CustomerService.getCustomers({ search: q }),
-      CategoryService.getCategories(),
-      CollectionService.getCollections(),
-      CouponService.getCoupons(),
-      JournalService.getArticles(),
-      ReviewService.getReviews(),
-      MediaService.getMedia({ search: q })
+    // Fire all searches in parallel (mimicking microservices / fast RPC). One
+    // category failing (permissions, network) shouldn't blank out the rest.
+    const [products, orders, customers, categories, collections, coupons, articles, reviews, media] = await Promise.all([
+      settleOrEmpty(ProductService.getProducts()), // Could pass { search: q } if implemented
+      settleOrEmpty(OrderService.getOrders()),
+      settleOrEmpty(CustomerService.getCustomers({ search: q })),
+      settleOrEmpty(CategoryService.getCategories()),
+      settleOrEmpty(CollectionService.getCollections()),
+      settleOrEmpty(CouponService.getCoupons()),
+      settleOrEmpty(JournalService.getArticles()),
+      settleOrEmpty(ReviewService.getReviews()),
+      settleOrEmpty(MediaService.getMedia({ search: q })),
     ]);
 
     // Manual filtering for services that don't yet support {search: q} natively in Mock

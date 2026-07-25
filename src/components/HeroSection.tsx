@@ -55,6 +55,10 @@ export default function HeroSection() {
   const [ctaLink, setCtaLink] = useState(initialSettings?.ctaLink || '/shop');
   const [secondaryCtaText, setSecondaryCtaText] = useState(initialSettings?.secondaryCtaText || 'قصتنا الفنية');
   const [secondaryCtaLink, setSecondaryCtaLink] = useState(initialSettings?.secondaryCtaLink || '/about');
+  // True until the first live fetch resolves; getSectionsSync() has nothing to
+  // read before that, so this covers the gap where slides show DEFAULT_SLIDES
+  // rather than the real CMS content.
+  const [isLoadingHero, setIsLoadingHero] = useState(true);
 
   const loadHeroData = async () => {
     try {
@@ -70,8 +74,14 @@ export default function HeroSection() {
       }
     } catch {
       // keep defaults
+    } finally {
+      setIsLoadingHero(false);
     }
   };
+
+  useEffect(() => {
+    loadHeroData();
+  }, []);
 
   useEventSubscribeMany(['website.changed'], loadHeroData);
 
@@ -115,10 +125,13 @@ export default function HeroSection() {
 
   return (
     <section 
-      ref={ref} 
+      ref={ref}
       className="relative w-full h-auto lg:h-[100vh] lg:min-h-[650px] overflow-hidden bg-background-primary flex flex-col lg:flex-row items-stretch border-b border-brand-border/40"
     >
-      
+      {isLoadingHero && (
+        <div className="absolute top-0 left-0 right-0 h-[2px] bg-accent/50 animate-pulse z-30" aria-hidden="true" />
+      )}
+
       {/* Magazine Grid Layout (Desktop: Split Screen; Mobile: Stacked Layout) */}
       <div className="w-full h-full flex flex-col lg:grid lg:grid-cols-[1.1fr_0.9fr] lg:items-stretch relative">
         

@@ -1,5 +1,6 @@
+import { createClient } from '@/lib/supabase/client';
+import type { Tables, TablesUpdate, Json } from '@/lib/supabase/database.types';
 import { eventBus } from '@/lib/events/EventBus';
-import { mockStorage } from '@/lib/storage/mock-storage';
 
 export interface AnnouncementBarSettings {
   enabled: boolean;
@@ -30,61 +31,72 @@ export interface StoreInfo {
   announcementBar: AnnouncementBarSettings;
 }
 
-// Real AURA Egypt contact data — matches src/app/contact/page.tsx + src/config/whatsapp.ts
-let mockStoreInfo: StoreInfo = {
-  storeName: 'AURA | أورا',
-  phone: '+20 100 000 0000',
-  whatsapp: '+20 100 000 0000',
-  email: 'care@aura-fashion-virid.vercel.app',
-  supportEmail: 'care@aura-fashion-virid.vercel.app',
-  address: 'المهندسين، الجيزة، مصر',
-  googleMapsUrl: 'https://maps.google.com/?q=Mohandeseen+Giza+Egypt',
-  workingHours: 'يوميًا من 11 صباحًا حتى 8 مساءً',
-  commercialRegistration: '',
-  taxNumber: '',
-  socialMedia: {
-    facebook:  'https://www.facebook.com/AuraFashionEgypt',
-    instagram: 'https://www.instagram.com/aurafashionegy/',
-    whatsapp:  'https://wa.me/201000000000?text=%D9%85%D8%B1%D8%AD%D8%A8%D8%A7%D9%8B%D8%8C%20%D8%A3%D8%B1%D9%8A%D8%AF%20%D8%A7%D9%84%D8%A7%D8%B3%D8%AA%D9%81%D8%B3%D8%A7%D8%B1%20%D8%B9%D9%86%20%D9%85%D9%86%D8%AA%D8%AC%D8%A7%D8%AA%20AURA',
-    tiktok:    'https://www.tiktok.com/@aurabrand.eg',
-    pinterest: 'https://www.pinterest.com/aurabrandeg',
-  },
-  announcementBar: {
-    enabled: false,
-    text: 'شحن مجاني لجميع محافظات مصر على الطلبات فوق ٥٠٠ ج.م',
-    link: '/shop',
-    bgColor: '#1C1C1B',
-    textColor: '#FAF8F5',
-  },
-};
+type StoreInfoRow = Tables<'website_store_info'>;
 
-mockStoreInfo = mockStorage.read('storefront.store', mockStoreInfo);
+const supabase = createClient();
 
-// Backfill announcementBar for stores saved before this field existed
-if (!mockStoreInfo.announcementBar) {
-  mockStoreInfo.announcementBar = {
-    enabled: false,
-    text: 'شحن مجاني لجميع محافظات مصر على الطلبات فوق ٥٠٠ ج.م',
-    link: '/shop',
-    bgColor: '#1C1C1B',
-    textColor: '#FAF8F5',
+const DEFAULT_SOCIAL = { instagram: '', facebook: '', whatsapp: '', tiktok: '', pinterest: '' };
+const DEFAULT_ANNOUNCEMENT: AnnouncementBarSettings = { enabled: false, text: '', link: '/shop', bgColor: '#1C1C1B', textColor: '#FAF8F5' };
+
+function rowToStoreInfo(row: StoreInfoRow): StoreInfo {
+  return {
+    storeName: row.store_name,
+    phone: row.phone,
+    whatsapp: row.whatsapp,
+    email: row.email,
+    supportEmail: row.support_email,
+    address: row.address,
+    googleMapsUrl: row.google_maps_url,
+    workingHours: row.working_hours,
+    commercialRegistration: row.commercial_registration,
+    taxNumber: row.tax_number,
+    socialMedia: { ...DEFAULT_SOCIAL, ...(row.social_media as unknown as StoreInfo['socialMedia']) },
+    announcementBar: { ...DEFAULT_ANNOUNCEMENT, ...(row.announcement_bar as unknown as AnnouncementBarSettings) },
   };
 }
 
+let cache: StoreInfo | null = null;
+
 export const StoreService = {
   async getInfo(): Promise<StoreInfo> {
-    return this.getInfoSync();
+    const { data, error } = await supabase.from('website_store_info').select('*').eq('id', 1).single();
+    if (error) throw error;
+    cache = rowToStoreInfo(data);
+    return cache;
   },
 
-  /** Synchronous counterpart of `getInfo`, for seeding initial render state without an async gap (avoids a CLS-causing pop-in of the announcement bar). */
+  /**
+   * Synchronous counterpart of `getInfo`, for seeding initial render state without an
+   * async gap (avoids a CLS-causing pop-in of the announcement bar). Returns the last
+   * fetched value, or safe empty defaults before the first fetch completes.
+   */
   getInfoSync(): StoreInfo {
-    return { ...mockStoreInfo };
+    return cache ?? {
+      storeName: '', phone: '', whatsapp: '', email: '', supportEmail: '', address: '',
+      googleMapsUrl: '', workingHours: '', commercialRegistration: '', taxNumber: '',
+      socialMedia: { ...DEFAULT_SOCIAL }, announcementBar: { ...DEFAULT_ANNOUNCEMENT },
+    };
   },
 
   async updateInfo(updates: Partial<StoreInfo>): Promise<StoreInfo> {
-    mockStoreInfo = { ...mockStoreInfo, ...updates };
-    mockStorage.write('storefront.store', mockStoreInfo);
+    const patch: TablesUpdate<'website_store_info'> = {};
+    if (updates.storeName !== undefined) patch.store_name = updates.storeName;
+    if (updates.phone !== undefined) patch.phone = updates.phone;
+    if (updates.whatsapp !== undefined) patch.whatsapp = updates.whatsapp;
+    if (updates.email !== undefined) patch.email = updates.email;
+    if (updates.supportEmail !== undefined) patch.support_email = updates.supportEmail;
+    if (updates.address !== undefined) patch.address = updates.address;
+    if (updates.googleMapsUrl !== undefined) patch.google_maps_url = updates.googleMapsUrl;
+    if (updates.workingHours !== undefined) patch.working_hours = updates.workingHours;
+    if (updates.commercialRegistration !== undefined) patch.commercial_registration = updates.commercialRegistration;
+    if (updates.taxNumber !== undefined) patch.tax_number = updates.taxNumber;
+    if (updates.socialMedia !== undefined) patch.social_media = { ...DEFAULT_SOCIAL, ...updates.socialMedia } as unknown as Json;
+    if (updates.announcementBar !== undefined) patch.announcement_bar = { ...DEFAULT_ANNOUNCEMENT, ...updates.announcementBar } as unknown as Json;
+
+    const { data, error } = await supabase.from('website_store_info').update(patch).eq('id', 1).select().single();
+    if (error) throw error;
+    cache = rowToStoreInfo(data);
     eventBus.emit('website.changed', { area: 'store' });
-    return { ...mockStoreInfo };
-  }
+    return cache;
+  },
 };

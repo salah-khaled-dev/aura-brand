@@ -7,16 +7,16 @@ import { useStore } from "@/context/StoreContext";
 import { useNotification } from "@/context/NotificationContext";
 import { useStorefrontProducts } from "@/hooks/useStorefrontProducts";
 import { primaryImage, discountOriginalPrice, resolveStockStatus } from "@/data/mock/products";
-import { getRelatedProducts } from "@/lib/catalog/storefront-catalog";
+import { getRelatedProducts } from "@/lib/services/storefront/storefront-product.service";
 import { ProductCard } from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import { motion, AnimatePresence } from "framer-motion";
-import { analytics } from "@/utils/analytics";
 import Image from "next/image";
 import CompleteTheLook from "@/components/product/CompleteTheLook";
 import SizeRecommendation from "@/components/product/SizeRecommendation";
 import RecentlyViewed from "@/components/product/RecentlyViewed";
 import { useRecentlyViewed } from "@/hooks/useRecentlyViewed";
+import { ProductDetailSkeleton } from "@/components/ui/Skeleton";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -28,7 +28,7 @@ export default function ProductDetailClient({ params }: PageProps) {
   const { addToCart, toggleWishlist, isInWishlist } = useStore();
   const { showNotification } = useNotification();
 
-  const products = useStorefrontProducts();
+  const { products, loading } = useStorefrontProducts();
   const product = products.find((p) => p.id === id);
 
   // States
@@ -44,12 +44,12 @@ export default function ProductDetailClient({ params }: PageProps) {
 
   useEffect(() => {
     if (product) {
-      analytics.trackProductView(product.id, product.name, product.price);
       addViewedItem(product.id);
     }
   }, [product, addViewedItem]);
 
   if (!product) {
+    if (loading) return <ProductDetailSkeleton />;
     return (
       <div className="max-w-[720px] mx-auto py-24 text-center">
         <h2 className="font-sans text-3xl font-light text-text-primary">القطعة غير متوفرة في الأتيلييه</h2>
@@ -105,7 +105,6 @@ export default function ProductDetailClient({ params }: PageProps) {
       collection: product.collection,
       variantImages: galleryImages,
     });
-    analytics.trackAddToCart(product.id, product.name, product.price, selectedSize, selectedColor, quantity);
     showNotification(
       "تمت إضافة القطعة إلى حقيبتكِ بنجاح",
       "success"
@@ -117,7 +116,7 @@ export default function ProductDetailClient({ params }: PageProps) {
   const wishlisted = isInWishlist(product.id);
 
   // Same-collection matches first, backfilled with same-season items, capped at 4.
-  const relatedProducts = getRelatedProducts(product, products);
+  const relatedProducts = getRelatedProducts(product, products, 4);
 
   return (
     <div className="bg-background-primary min-h-screen pb-20 md:pb-0 flex flex-col items-center">

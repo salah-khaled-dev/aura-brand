@@ -1,5 +1,3 @@
-import { mockStorage } from '@/lib/storage/mock-storage';
-
 export type OrderStatus =
   // Canonical unified workflow (storefront + admin share these)
   | 'pending' | 'confirmed' | 'preparing' | 'ready_to_ship'
@@ -39,6 +37,8 @@ export interface OrderItem {
 export interface Order {
   id: string;
   orderNumber: string;
+  /** Independent, permanent invoice number (e.g. INV-2026-000001) — never reused as/from orderNumber. */
+  invoiceNumber?: string;
   customerId: string;
   customerName: string;
   customerEmail: string;
@@ -81,8 +81,3 @@ export interface Order {
   updatedAt: string;
 }
 
-export let mockOrders: Order[] = [];
-
-mockOrders = mockStorage.read('orders', mockOrders);
-
-export const updateMockOrders = (data: Order[]) => { mockOrders = data; mockStorage.write('orders', data); };

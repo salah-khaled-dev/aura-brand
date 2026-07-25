@@ -2,7 +2,7 @@
 
 import { useNotification } from "@/context/NotificationContext";
 import { useEventSubscribe } from "@/hooks/useEventBus";
-import type { CustomerNotification } from "@/data/mock/customer-notifications";
+import type { CustomerNotification } from "@/lib/services/customer-notification.service";
 
 /**
  * Bridges the order EventBus to the storefront toast system: whenever an order

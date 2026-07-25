@@ -22,6 +22,9 @@ export type AuthErrorCode =
   | 'email_not_confirmed'
   | 'network'
   | 'session_expired'
+  | 'invalid_session'
+  | 'weak_password'
+  | 'same_password'
   | 'unknown';
 
 export class AuthError extends Error {
@@ -84,6 +87,16 @@ function mapSupabaseAuthError(message: string | undefined): AuthErrorCode {
   const m = (message ?? '').toLowerCase();
   if (m.includes('invalid login credentials')) return 'invalid_credentials';
   if (m.includes('email not confirmed')) return 'email_not_confirmed';
+  if (m.includes('failed to fetch') || m.includes('network')) return 'network';
+  return 'unknown';
+}
+
+/** Maps `updateUser({ password })` failures during the recovery flow to a UI-facing code. */
+function mapUpdatePasswordError(message: string | undefined): AuthErrorCode {
+  const m = (message ?? '').toLowerCase();
+  if (m.includes('should be different from the old password')) return 'same_password';
+  if (m.includes('password') && (m.includes('weak') || m.includes('short') || m.includes('at least'))) return 'weak_password';
+  if (m.includes('auth session missing') || m.includes('session') || m.includes('jwt')) return 'invalid_session';
   if (m.includes('failed to fetch') || m.includes('network')) return 'network';
   return 'unknown';
 }
@@ -154,6 +167,10 @@ export const AuthService = {
       const session = await buildSessionFromUserId(data.user.id, data.user.email ?? null);
       cachedSession = session;
       eventBus.emit('user.updated', session.user);
+      // Best-effort activity log entry — never let a logging hiccup fail a real sign-in.
+      void supabase.rpc('log_auth_event', { p_action: 'login' }).then(({ error }) => {
+        if (error) console.error('log_auth_event(login) failed:', error.message);
+      });
       return session;
     } catch (err) {
       if (err instanceof AuthError) throw err;
@@ -179,6 +196,12 @@ export const AuthService = {
 
   async signOut(): Promise<void> {
     cachedSession = null;
+    // Must log before signOut() clears the session — auth.uid() is null afterward.
+    try {
+      await supabase.rpc('log_auth_event', { p_action: 'logout' });
+    } catch (err) {
+      console.error('log_auth_event(logout) failed:', err);
+    }
     await supabase.auth.signOut();
     if (typeof window !== 'undefined') {
       window.localStorage.removeItem('aura_admin_view_as_role');
@@ -225,5 +248,47 @@ export const AuthService = {
 
     const { error } = await supabase.auth.updateUser({ password: newPassword });
     if (error) throw new Error(error.message);
+  },
+
+  /**
+   * Sends a recovery email whose link lands on `/auth/confirm`, which exchanges the
+   * token for a session and forwards to `/auth/reset-password`. `redirectTo` must be
+   * present in Supabase Dashboard → Authentication → URL Configuration → Redirect URLs,
+   * or Supabase silently falls back to the project's Site URL.
+   * Never throws for an unknown email — Supabase itself does not reveal whether an
+   * account exists, so neither does this method.
+   */
+  async requestPasswordReset(email: string): Promise<void> {
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      throw new AuthError('network');
+    }
+    const trimmed = email?.trim();
+    if (!trimmed) throw new AuthError('invalid_credentials');
+
+    const redirectTo = `${window.location.origin}/auth/confirm?next=${encodeURIComponent('/auth/reset-password')}`;
+    const { error } = await supabase.auth.resetPasswordForEmail(trimmed, { redirectTo });
+    if (error) {
+      console.error('Password reset failed:', {
+        message: error?.message,
+        code: (error as { code?: string })?.code,
+        status: (error as { status?: number })?.status,
+        details: error,
+      });
+      throw new AuthError(mapSupabaseAuthError(error.message));
+    }
+  },
+
+  /**
+   * Completes a recovery flow: assumes `/auth/confirm` already exchanged the emailed
+   * token for a session (via cookies), then sets the new password on that session.
+   */
+  async updatePasswordAfterRecovery(newPassword: string): Promise<void> {
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      throw new AuthError('network');
+    }
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) {
+      throw new AuthError(mapUpdatePasswordError(error.message));
+    }
   },
 };

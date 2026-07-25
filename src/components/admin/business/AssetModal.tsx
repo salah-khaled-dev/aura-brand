@@ -6,7 +6,7 @@ import { Input } from '@/components/admin/design-system/Input';
 import { TextArea } from '@/components/admin/design-system/TextArea';
 import React, { useState, useEffect } from 'react';
 import { IconDeviceFloppy } from '@tabler/icons-react';
-import { Asset } from '@/data/mock/business';
+import { Asset } from '@/lib/services/business.service';
 
 interface AssetModalProps {
   isOpen: boolean;
