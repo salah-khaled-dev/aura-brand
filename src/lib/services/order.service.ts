@@ -284,7 +284,7 @@ class SupabaseOrderRepositoryImpl implements IOrderRepository {
       shipping_fee: shipping,
       tax_amount: tax,
       total,
-      coupon_id: input.couponId ?? null,
+      coupon_id: input.couponId || null,
       coupon_code: input.couponCode ?? null,
       phone: sanitizePhone(input.customerPhone) || '00000000',
       shipping_address: { formatted: input.shippingAddress ?? '' },
@@ -541,9 +541,10 @@ class SupabaseOrderRepositoryImpl implements IOrderRepository {
     for (const order of orders.filter(o => o.status === COMPLETED_STATUS)) {
       await restoreInventoryForOrder(order);
     }
-    const { error } = await supabase.from('orders').delete().in('id', ids);
+    const { data: deleted, error } = await supabase.from('orders').delete().in('id', ids).select('id');
     if (error) throw error;
-    eventBus.emit('orders.bulk_deleted', ids);
+    if (!deleted || deleted.length === 0) throw new Error('غير مصرح لك بحذف هذه الطلبات');
+    eventBus.emit('orders.bulk_deleted', deleted.map(d => d.id));
     eventBus.emit('business.changed');
   }
 

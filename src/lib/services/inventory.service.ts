@@ -174,14 +174,25 @@ export const InventoryService = {
    * This is the single entry point every other module uses to touch stock.
    */
   async recordMovement(input: RecordMovementInput): Promise<InventoryMovement> {
+    // p_product_id/p_variant_id are `uuid` RPC params — Postgres rejects ''
+    // with "invalid input syntax for type uuid" (a hard error, never reaching
+    // the function body's own graceful "Product not found" handling), so an
+    // empty string has to be normalized to null here, same as undefined/null.
+    // `''` reaches this call whenever the order line's product was since
+    // deleted from the catalog (order_items.product_id → SET NULL on delete,
+    // then rowToItem() defaults the null to '' to satisfy OrderItem.productId:
+    // string) and a completed order carrying that line is cancelled/deleted.
     const { data, error } = await supabase.rpc('record_stock_movement', {
-      p_product_id: input.productId,
-      p_variant_id: input.variantId ?? null,
+      // Generated Args type says `p_product_id: string` (non-nullable), but
+      // the actual Postgres param is a nullable `uuid` (see 20260715000004) —
+      // typegen infers "no DEFAULT" as "required", not the real nullability.
+      p_product_id: (input.productId || null) as string,
+      p_variant_id: input.variantId || null,
       p_type: input.type,
       p_quantity: input.quantity,
       p_reason: input.reason,
       p_reference_type: input.referenceType ?? null,
-      p_reference_id: input.referenceId ?? null,
+      p_reference_id: input.referenceId || null,
       p_warehouse_id: input.warehouseId ?? null,
     });
     if (error) throw new Error(error.message);
