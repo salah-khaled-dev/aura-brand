@@ -17,6 +17,7 @@ import { getInvoiceNumber, getPaymentBadgeMeta } from "@/lib/orders/invoice-help
 import { getStatusMeta, buildCustomerTimeline, hasShipped } from "@/lib/orders/order-status";
 import { downloadInvoicePdf } from "@/lib/pdf/generate-invoice-pdf";
 import { generateTrackingQrCode } from "@/lib/pdf/qr-code";
+import { useNotification } from "@/context/NotificationContext";
 
 const PAYMENT_METHOD_LABELS: Record<string, string> = {
   cod: "الدفع عند الاستلام",
@@ -35,6 +36,7 @@ interface InvoiceViewProps {
 }
 
 export default function InvoiceView({ order, storeInfo, hideActions }: InvoiceViewProps) {
+  const { showNotification } = useNotification();
   const [downloading, setDownloading] = useState(false);
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string | null>(null);
 
@@ -52,6 +54,9 @@ export default function InvoiceView({ order, storeInfo, hideActions }: InvoiceVi
     setDownloading(true);
     try {
       await downloadInvoicePdf(order, storeInfo);
+    } catch (error) {
+      console.error('Failed to generate invoice PDF:', error);
+      showNotification('تعذّر تحميل الفاتورة، يرجى المحاولة مرة أخرى', 'error');
     } finally {
       setDownloading(false);
     }

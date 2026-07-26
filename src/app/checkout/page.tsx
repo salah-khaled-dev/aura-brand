@@ -295,7 +295,8 @@ export default function CheckoutPage() {
     try {
       const storeInfo = await StoreService.getInfo();
       await downloadInvoicePdf(createdOrder, storeInfo);
-    } catch {
+    } catch (error) {
+      console.error('Failed to generate invoice PDF:', error);
       showNotification("تعذر تحميل الفاتورة، يرجى المحاولة مرة أخرى", "error");
     } finally {
       setDownloadingInvoice(false);

@@ -10,6 +10,11 @@ import { formatCurrency, formatDate } from '@/lib/utils/formatters';
 import { toast } from 'sonner';
 import { StoreService, type StoreInfo } from '@/lib/services/storefront/store.service';
 import { downloadInvoicePdf } from '@/lib/pdf/generate-invoice-pdf';
+import { usePermissions } from '@/lib/auth/PermissionContext';
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error && error.message ? error.message : adminAr.toasts.unexpectedError;
+}
 
 // SaaS UI Components
 import { PageHeader, Skeleton } from '@/components/admin/design-system/Layout';
@@ -39,6 +44,8 @@ import {
 export default function OrderDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: orderId } = use(params);
   const router = useRouter();
+  const { can } = usePermissions();
+  const canDelete = can('orders', 'delete');
   const [order, setOrder] = useState<Order | null>(null);
   const [storeInfo, setStoreInfo] = useState<StoreInfo | null>(null);
   const [loading, setLoading] = useState(true);
@@ -183,8 +190,9 @@ export default function OrderDetailsPage({ params }: { params: Promise<{ id: str
     setDownloadingInvoice(true);
     try {
       await downloadInvoicePdf(order, storeInfo);
-    } catch {
-      toast.error(adminAr.toasts.unexpectedError);
+    } catch (error) {
+      console.error('Failed to generate invoice PDF:', error);
+      toast.error(getErrorMessage(error));
     } finally {
       setDownloadingInvoice(false);
     }
@@ -227,8 +235,9 @@ export default function OrderDetailsPage({ params }: { params: Promise<{ id: str
       await OrderService.deleteOrder(order.id);
       toast.success('تم حذف الطلب');
       router.push('/admin/orders');
-    } catch {
-      toast.error(adminAr.toasts.unexpectedError);
+    } catch (error) {
+      console.error('Failed to delete order:', error);
+      toast.error(getErrorMessage(error));
       setDeleting(false);
     }
   };
@@ -309,9 +318,11 @@ export default function OrderDetailsPage({ params }: { params: Promise<{ id: str
                 إلغاء الطلب
               </Button>
             )}
-            <Button variant="danger" onClick={handleDeleteOrder} disabled={deleting} isLoading={deleting} leftIcon={<IconTrash size={18} />}>
-              حذف
-            </Button>
+            {canDelete && (
+              <Button variant="danger" onClick={handleDeleteOrder} disabled={deleting} isLoading={deleting} leftIcon={<IconTrash size={18} />}>
+                حذف
+              </Button>
+            )}
           </>
         }
       />

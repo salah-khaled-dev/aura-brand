@@ -9,22 +9,33 @@ import { getStatusMeta, buildCustomerTimeline, hasShipped } from '@/lib/orders/o
 
 let fontsRegistered = false;
 
-/** Registered once per session — El Messiri (display) + Alexandria (body) are the
- *  only fonts in this document that actually shape/join Arabic glyphs correctly. */
+/**
+ * Registered once per session — El Messiri (display) + Alexandria (body) are the
+ * only fonts in this document that actually shape/join Arabic glyphs correctly.
+ *
+ * Sources must be fully-qualified URLs, not root-relative paths: react-pdf's font
+ * loader (@react-pdf/font) uses the `is-url` package to pick between `fetch(src)`
+ * and `fontkit.open(src)` (a Node-only filesystem read that isn't even exported
+ * by fontkit's browser bundle). `is-url` requires a scheme, so a path like
+ * `/fonts/Alexandria-Regular.ttf` is NOT a URL to it — every registration would
+ * fall into the fontkit.open() branch and throw "fontkit.open is not a function"
+ * the instant the PDF renders, in every browser, 100% of the time.
+ */
 function registerFonts() {
   if (fontsRegistered) return;
+  const base = window.location.origin;
   Font.register({
     family: 'ElMessiri',
     fonts: [
-      { src: '/fonts/ElMessiri-Regular.ttf', fontWeight: 'normal' },
-      { src: '/fonts/ElMessiri-Bold.ttf', fontWeight: 'bold' },
+      { src: `${base}/fonts/ElMessiri-Regular.ttf`, fontWeight: 'normal' },
+      { src: `${base}/fonts/ElMessiri-Bold.ttf`, fontWeight: 'bold' },
     ],
   });
   Font.register({
     family: 'Alexandria',
     fonts: [
-      { src: '/fonts/Alexandria-Regular.ttf', fontWeight: 'normal' },
-      { src: '/fonts/Alexandria-Bold.ttf', fontWeight: 'bold' },
+      { src: `${base}/fonts/Alexandria-Regular.ttf`, fontWeight: 'normal' },
+      { src: `${base}/fonts/Alexandria-Bold.ttf`, fontWeight: 'bold' },
     ],
   });
   fontsRegistered = true;

@@ -37,7 +37,8 @@ export default function InvoicePage({ params }: { params: Promise<{ id: string }
     setDownloading(true);
     try {
       await downloadInvoicePdf(order, storeInfo);
-    } catch {
+    } catch (error) {
+      console.error('Failed to generate invoice PDF:', error);
       toast.error('تعذّر تحميل الفاتورة');
     } finally {
       setDownloading(false);

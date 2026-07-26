@@ -164,8 +164,9 @@ export default function OrdersPage() {
       toast.success(adminAr.toasts.itemsDeleted);
       setSelectedIds([]);
       loadOrders();
-    } catch {
-      toast.error(adminAr.toasts.unexpectedError);
+    } catch (error) {
+      console.error('Failed to delete orders:', error);
+      toast.error(error instanceof Error && error.message ? error.message : adminAr.toasts.unexpectedError);
     }
   };
 

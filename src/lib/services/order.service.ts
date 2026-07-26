@@ -420,8 +420,9 @@ class SupabaseOrderRepositoryImpl implements IOrderRepository {
     if (order.status === COMPLETED_STATUS) {
       await restoreInventoryForOrder(order);
     }
-    // Requires super_admin per RLS (orders_delete_super_admin) — a regular
-    // admin's delete is silently filtered to zero rows by Postgres RLS.
+    // Requires admin per RLS (orders_delete_admin, 20260726000001) — a
+    // deactivated/non-admin session is silently filtered to zero rows by
+    // Postgres RLS rather than erroring, so that case is surfaced explicitly.
     const { data, error } = await supabase.from('orders').delete().eq('id', id).select('id');
     if (error) throw error;
     if (!data || data.length === 0) throw new Error('غير مصرح لك بحذف هذا الطلب');
