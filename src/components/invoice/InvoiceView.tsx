@@ -209,7 +209,19 @@ export default function InvoiceView({ order, storeInfo, hideActions }: InvoiceVi
                     <td className="py-3 px-3">
                       <p className="font-bold text-text-primary">{item.productName}</p>
                     </td>
-                    <td className="py-3 px-3 text-center text-text-primary">{item.color || "—"}</td>
+                    <td className="py-3 px-3 text-center text-text-primary">
+                      {item.color ? (
+                        <span className="inline-flex items-center gap-1.5">
+                          {item.colorHex && (
+                            <span
+                              className="inline-block w-2.5 h-2.5 rounded-full border border-black/10 shrink-0"
+                              style={{ backgroundColor: item.colorHex }}
+                            />
+                          )}
+                          {item.color}
+                        </span>
+                      ) : "—"}
+                    </td>
                     <td className="py-3 px-3 text-center text-text-primary">{item.size || "—"}</td>
                     <td className="py-3 px-3 text-center text-text-primary">{item.quantity}</td>
                     <td className="py-3 px-3 text-center text-text-primary">{formatCurrency(item.price)}</td>

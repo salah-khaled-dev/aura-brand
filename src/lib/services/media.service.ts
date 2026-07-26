@@ -23,6 +23,8 @@ function rowToMedia(row: Tables<'media'>): Media {
     height: row.height ?? 0,
     size: row.size_bytes,
     folder: row.folder,
+    bucketId: row.bucket_id,
+    storagePath: row.storage_path,
     url: row.url,
     thumbnail: row.thumbnail_url ?? row.url,
     uploadedAt: row.created_at,
@@ -139,15 +141,6 @@ export const MediaService = {
     await Promise.all(
       Array.from(byBucket.entries()).map(([bucket, paths]) => supabase.storage.from(bucket).remove(paths))
     );
-  },
-
-  async existsByName(originalName: string): Promise<boolean> {
-    const { count, error } = await supabase
-      .from('media')
-      .select('id', { count: 'exact', head: true })
-      .eq('original_name', originalName);
-    if (error) throw new Error(error.message);
-    return (count ?? 0) > 0;
   },
 
   async getFolders(): Promise<string[]> {

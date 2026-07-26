@@ -32,6 +32,8 @@ export interface OrderItem {
   image?: string;
   size?: string;
   color?: string;
+  colorId?: string;
+  colorHex?: string;
 }
 
 export interface Order {

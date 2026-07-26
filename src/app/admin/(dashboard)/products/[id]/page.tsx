@@ -6,14 +6,19 @@ import { ProductService } from '@/lib/services/product.service';
 import { CategoryService } from '@/lib/services/category.service';
 import { CollectionService } from '@/lib/services/collection.service';
 import { BrandService } from '@/lib/services/brand.service';
-import { Product, ProductStatus, ProductVariant } from '@/data/mock/products';
+import { Product, ProductStatus, ProductVariant, ProductColorVariant } from '@/data/mock/products';
 import { formatCurrency } from '@/lib/utils/formatters';
 import { useProtectedAutosave } from '@/hooks/useProtectedAutosave';
 import { toast } from 'sonner';
 import { IconArrowRight, IconDeviceFloppy, IconCloud, IconCloudOff, IconRefresh, IconEye, IconCalendar, IconPlus, IconTrash, IconHistory } from '@tabler/icons-react';
 import { ActivityTimeline } from '@/components/admin/ActivityTimeline';
 import { ActivityLogService, ActivityLogEntry } from '@/lib/services/activity-log.service';
-import { ImageUpload } from '@/components/admin/ui/ImageUpload';
+import { ColorVariantsEditor } from '@/components/admin/products/ColorVariantsEditor';
+
+/** Every product must always have exactly one default color — created automatically so the admin can upload photos immediately. */
+function createDefaultColorScaffold(): ProductColorVariant {
+  return { id: `color_${Date.now()}`, color: 'افتراضي', colorEn: 'Default', value: '#000000', images: [], sortOrder: 0, isDefault: true, isActive: true };
+}
 
 export default function ProductEditorPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
@@ -22,7 +27,7 @@ export default function ProductEditorPage({ params }: { params: Promise<{ id: st
   const isNew = id === 'new';
 
   const [initialLoading, setInitialLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'general' | 'costing' | 'variants' | 'timeline' | 'revisions'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'colors' | 'costing' | 'variants' | 'timeline' | 'revisions'>('general');
   const [showPreview, setShowPreview] = useState(false);
 
   const [productData, setProductData] = useState<Product | null>(null);
@@ -73,7 +78,7 @@ export default function ProductEditorPage({ params }: { params: Promise<{ id: st
         price: 0, comparePrice: 0, costPrice: 0, sku: '', barcode: '',
         stock: 0, lowStockLimit: 5, material: '', weight: 0, variants: [],
         featured: false, bestSeller: false, newArrival: false,
-        status: 'draft', revisions: [], images: [],
+        status: 'draft', revisions: [], images: [], colorVariants: [createDefaultColorScaffold()],
         seo: { metaTitle: '', metaDescription: '', keywords: '', canonicalUrl: '', ogTitle: '', ogDescription: '' },
         stats: { views: 0, orders: 0, revenue: 0, wishlistCount: 0, cartCount: 0, reviewsCount: 0 },
         costing: { fabric: 0, accessories: 0, manufacturing: 0, printing: 0, packaging: 0, photography: 0, shipping: 0, marketing: 0, taxes: 0, marketplaceFees: 0, otherExpenses: 0 }
@@ -93,6 +98,11 @@ export default function ProductEditorPage({ params }: { params: Promise<{ id: st
 
   const handleManualSave = async () => {
     if (!data) return;
+    const colorWithoutImages = (data.colorVariants || []).find((c) => c.images.length === 0);
+    if (colorWithoutImages) {
+      toast.error(`اللون "${colorWithoutImages.color || ''}" لا يحتوي على أي صورة — أضيفي صورة واحدة على الأقل لكل لون`);
+      return;
+    }
     setManualSaving(true);
     try {
       if (isNew) {
@@ -123,10 +133,12 @@ export default function ProductEditorPage({ params }: { params: Promise<{ id: st
   const addVariant = () => {
     updateData((prev) => {
       if (!prev) return prev;
+      const defaultColor = (prev.colorVariants || [])[0];
       const newVariant: ProductVariant = {
         id: `var_${Date.now()}`,
         sku: `${prev.sku || 'SKU'}-${prev.variants.length + 1}`,
-        color: '',
+        color: defaultColor?.color || '',
+        colorId: defaultColor?.id,
         size: '',
         price: prev.price,
         stock: 0,
@@ -140,6 +152,14 @@ export default function ProductEditorPage({ params }: { params: Promise<{ id: st
     updateData((prev) =>
       prev ? { ...prev, variants: prev.variants.map((v) => (v.id === id ? { ...v, ...patch } : v)) } : prev
     );
+  };
+
+  const updateVariantColor = (id: string, colorId: string) => {
+    updateData((prev) => {
+      if (!prev) return prev;
+      const colorObj = (prev.colorVariants || []).find((c) => c.id === colorId);
+      return { ...prev, variants: prev.variants.map((v) => (v.id === id ? { ...v, colorId: colorId || undefined, color: colorObj?.color || '' } : v)) };
+    });
   };
 
   const removeVariant = (id: string) => {
@@ -241,6 +261,7 @@ export default function ProductEditorPage({ params }: { params: Promise<{ id: st
       <div className="flex space-x-reverse space-x-2 border-b border-[var(--admin-border-base)]">
         {[
           { id: 'general', label: 'البيانات الأساسية' },
+          { id: 'colors', label: 'الألوان' },
           { id: 'costing', label: 'محرك التكلفة والأسعار' },
           { id: 'variants', label: 'الخيارات والمتغيرات' },
           { id: 'timeline', label: 'سجل النشاطات' },
@@ -281,13 +302,18 @@ export default function ProductEditorPage({ params }: { params: Promise<{ id: st
                   <textarea className={inputClass + " min-h-[150px]"} value={data.description} onChange={(e) => updateData({ description: e.target.value })} />
                 </div>
               </div>
+            </div>
+          )}
 
-              <div className={cardClass + " space-y-4"}>
-                <h2 className="text-lg font-bold text-[var(--admin-text-base)]">الصور والوسائط</h2>
-                <ImageUpload
-                  multiple
-                  images={data.images}
-                  onChange={(images) => updateData({ images })}
+          {/* COLORS TAB */}
+          {activeTab === 'colors' && (
+            <div className="space-y-6 animate-in fade-in">
+              <div className={cardClass}>
+                <h2 className="text-lg font-bold text-[var(--admin-text-base)] mb-4">الألوان وصور المنتج</h2>
+                <ColorVariantsEditor
+                  colors={data.colorVariants || []}
+                  variants={data.variants}
+                  onChange={(colorVariants) => updateData({ colorVariants })}
                 />
               </div>
             </div>
@@ -395,10 +421,20 @@ export default function ProductEditorPage({ params }: { params: Promise<{ id: st
                               <input type="text" placeholder="M / 40" className="border border-[var(--admin-border-base)] bg-[var(--admin-bg-base)] text-[var(--admin-text-base)] rounded px-2 py-1 w-20 text-xs outline-none focus:border-[var(--admin-primary)] transition-colors" value={v.size} onChange={(e) => updateVariant(v.id, { size: e.target.value })} />
                             </td>
                             <td className="px-3 py-2">
-                              <div className="flex items-center gap-1.5">
-                                <input type="color" className="w-7 h-7 rounded border border-[var(--admin-border-base)] bg-transparent cursor-pointer p-0.5" value={/^#/.test(v.color) ? v.color : '#000000'} onChange={(e) => updateVariant(v.id, { color: e.target.value })} />
+                              {(data.colorVariants || []).length > 0 ? (
+                                <select
+                                  value={v.colorId || ''}
+                                  onChange={(e) => updateVariantColor(v.id, e.target.value)}
+                                  className="border border-[var(--admin-border-base)] bg-[var(--admin-bg-base)] text-[var(--admin-text-base)] rounded px-2 py-1 text-xs outline-none focus:border-[var(--admin-primary)] transition-colors min-w-[110px]"
+                                >
+                                  <option value="">اختر لوناً</option>
+                                  {(data.colorVariants || []).map((c) => (
+                                    <option key={c.id} value={c.id}>{c.color || 'بدون اسم'}</option>
+                                  ))}
+                                </select>
+                              ) : (
                                 <input type="text" placeholder="أحمر" className="border border-[var(--admin-border-base)] bg-[var(--admin-bg-base)] text-[var(--admin-text-base)] rounded px-2 py-1 w-20 text-xs outline-none focus:border-[var(--admin-primary)] transition-colors" value={v.color} onChange={(e) => updateVariant(v.id, { color: e.target.value })} />
-                              </div>
+                              )}
                             </td>
                             <td className="px-3 py-2"><input type="text" className="border border-[var(--admin-border-base)] bg-[var(--admin-bg-base)] text-[var(--admin-text-base)] rounded px-2 py-1 w-full min-w-[120px] text-xs font-mono outline-none focus:border-[var(--admin-primary)] transition-colors" value={v.sku} onChange={(e) => updateVariant(v.id, { sku: e.target.value })} /></td>
                             <td className="px-3 py-2"><input type="number" min={0} className="border border-[var(--admin-border-base)] bg-[var(--admin-bg-base)] text-[var(--admin-text-base)] rounded px-2 py-1 w-24 text-xs outline-none focus:border-[var(--admin-primary)] transition-colors" value={v.price} onChange={(e) => updateVariant(v.id, { price: Number(e.target.value) })} /></td>

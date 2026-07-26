@@ -9,7 +9,7 @@
 import { createClient } from '@/lib/supabase/client';
 
 export const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
-export const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+export const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/avif'];
 
 // 80-85 is the sweet spot for WebP: visually lossless for photography, big size win over
 // re-encoded JPEG/PNG. Kept as a constant so it's tunable in one place.
@@ -35,7 +35,7 @@ function baseNameWithoutExtension(fileName: string): string {
   return sanitized.replace(/\.[^.]+$/, '');
 }
 
-interface ConvertedImage {
+export interface ConvertedImage {
   blob: Blob;
   fileName: string;
   mimeType: string;
@@ -48,19 +48,16 @@ interface ConvertedImage {
  * aspect ratio is untouched) and alpha (canvas 2D contexts are RGBA by default, and
  * `toBlob('image/webp', q)` encodes the alpha channel — PNG transparency survives).
  *
- * GIFs are passed through unconverted: drawing a GIF to a canvas only captures its first
- * frame, which would silently kill animation. Everything else (JPEG/PNG/WebP) is re-encoded.
- *
  * Falls back to the original file if the browser can't produce a WebP blob (very old
- * WebKit), so uploads never hard-fail because of the conversion step.
+ * WebKit, or a format `createImageBitmap` can't decode), so uploads never hard-fail
+ * because of the conversion step.
+ *
+ * Exported as `compressImageForUpload` for callers that need the compressed blob
+ * without going through `uploadImageFile`'s Supabase Storage call — e.g. the review-photo
+ * forms, which send the compressed blob to a server API route instead.
  */
-async function convertToWebP(file: File): Promise<ConvertedImage> {
+export async function compressImageForUpload(file: File): Promise<ConvertedImage> {
   const baseName = baseNameWithoutExtension(file.name);
-
-  if (file.type === 'image/gif') {
-    const { width, height } = await readDimensions(file);
-    return { blob: file, fileName: `${baseName}.gif`, mimeType: file.type, width, height };
-  }
 
   try {
     const bitmap = await createImageBitmap(file);
@@ -128,7 +125,7 @@ export async function uploadImageFile(
   sizeBytes: number;
 }> {
   const supabase = createClient();
-  const converted = await convertToWebP(file);
+  const converted = await compressImageForUpload(file);
   const fileName = `${Date.now()}_${converted.fileName}`;
   const path = `${folder}/${fileName}`;
 

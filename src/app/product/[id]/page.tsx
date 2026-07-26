@@ -73,6 +73,16 @@ export default async function ProductPage({ params }: PageProps) {
       }
     : undefined;
 
+  // Individual Review entries alongside the aggregate — capped so the payload
+  // stays reasonable; newest first (already the default order of getReviews).
+  const reviewEntries = approvedReviews.slice(0, 10).map((r) => ({
+    "@type": "Review",
+    "author": { "@type": "Person", "name": r.customerName },
+    "reviewRating": { "@type": "Rating", "ratingValue": String(r.rating), "bestRating": "5", "worstRating": "1" },
+    "reviewBody": r.content,
+    "datePublished": r.createdAt,
+  }));
+
   // Create JSON-LD product schema
   const productSchema = {
     "@context": "https://schema.org",
@@ -100,6 +110,7 @@ export default async function ProductPage({ params }: PageProps) {
       "itemCondition": "https://schema.org/NewCondition"
     },
     ...(aggregateRating ? { aggregateRating } : {}),
+    ...(reviewEntries.length > 0 ? { review: reviewEntries } : {}),
   };
 
   const breadcrumbSchema = {

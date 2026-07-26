@@ -105,29 +105,29 @@ export default function MediaLibraryPage() {
     setUploading(true);
     let successCount = 0;
     try {
+      // Each file is uploaded in isolation so one failure can't discard the
+      // uploads that already succeeded earlier in the same batch.
       for (const file of files) {
         const validationError = validateImageFile(file);
         if (validationError) {
           toast.error(validationError);
           continue;
         }
-        if (await MediaService.existsByName(file.name)) {
-          toast.warning(`تم تجاهل "${file.name}" لوجود ملف بنفس الاسم مسبقًا`);
-          continue;
+        try {
+          await MediaService.uploadMedia(file, {
+            alt: file.name,
+            folder: filters.folder !== 'all' ? filters.folder : 'uncategorized',
+          });
+          successCount++;
+        } catch (err) {
+          toast.error(err instanceof Error ? `فشل رفع "${file.name}": ${err.message}` : `فشل رفع "${file.name}"`);
         }
-        await MediaService.uploadMedia(file, {
-          alt: file.name,
-          folder: filters.folder !== 'all' ? filters.folder : 'uncategorized',
-        });
-        successCount++;
       }
       if (successCount > 0) {
         toast.success(successCount === 1 ? 'تم رفع الملف بنجاح' : `تم رفع ${successCount} ملفات بنجاح`);
         loadMedia();
         loadFolders();
       }
-    } catch {
-      toast.error('حدث خطأ أثناء الرفع');
     } finally {
       setUploading(false);
     }

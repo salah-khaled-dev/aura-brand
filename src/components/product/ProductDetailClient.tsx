@@ -1,12 +1,12 @@
 "use client";
 
-import React, { useState, use, useEffect } from "react";
+import React, { useState, use, useEffect, useRef } from "react";
 import Link from "next/link";
 import { IconHeart as Heart, IconShoppingBag as ShoppingBag, IconCheck as Check, IconX as X } from "@tabler/icons-react";
 import { useStore } from "@/context/StoreContext";
 import { useNotification } from "@/context/NotificationContext";
 import { useStorefrontProducts } from "@/hooks/useStorefrontProducts";
-import { primaryImage, discountOriginalPrice, resolveStockStatus } from "@/data/mock/products";
+import { primaryImage, discountOriginalPrice, resolveStockStatus, Product } from "@/data/mock/products";
 import { getRelatedProducts } from "@/lib/services/storefront/storefront-product.service";
 import { ProductCard } from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
@@ -15,6 +15,7 @@ import Image from "next/image";
 import CompleteTheLook from "@/components/product/CompleteTheLook";
 import SizeRecommendation from "@/components/product/SizeRecommendation";
 import RecentlyViewed from "@/components/product/RecentlyViewed";
+import { ProductReviews } from "@/components/product/ProductReviews";
 import { useRecentlyViewed } from "@/hooks/useRecentlyViewed";
 import { ProductDetailSkeleton } from "@/components/ui/Skeleton";
 
@@ -48,6 +49,20 @@ export default function ProductDetailClient({ params }: PageProps) {
     }
   }, [product, addViewedItem]);
 
+  // Selects the product's default color (falling back to the first) once per
+  // product, without fighting the customer's own subsequent color clicks if
+  // `product` gets a new reference later (e.g. a background refetch).
+  const initializedProductId = useRef<string | null>(null);
+  useEffect(() => {
+    if (!product || initializedProductId.current === product.id) return;
+    initializedProductId.current = product.id;
+    const colors = product.colorVariants;
+    if (!colors || colors.length === 0) return;
+    const defaultColor = colors.find((c) => c.isDefault) ?? colors[0];
+    setSelectedColor(defaultColor.color);
+    if (defaultColor.images.length > 0) setActiveImage(defaultColor.images[0]);
+  }, [product]);
+
   if (!product) {
     if (loading) return <ProductDetailSkeleton />;
     return (
@@ -61,25 +76,31 @@ export default function ProductDetailClient({ params }: PageProps) {
     );
   }
 
-  // Find matching variant
+  const hasColors = (product.colorVariants?.length ?? 0) > 0;
+
+  // Find matching color entity and compute its remaining stock: an explicit
+  // color-level stock override wins, otherwise it's the sum of the linked
+  // size variants' stock — a color with no linked size rows and no override
+  // is treated as always available (nothing to be "out of stock" of).
   const selectedVariant = product.colorVariants?.find((v) => v.color === selectedColor);
+  const getColorStock = (color: NonNullable<Product['colorVariants']>[number]): number => {
+    if (color.stock !== undefined) return color.stock;
+    const sizeStocks = product.variants.filter((v) => v.colorId === color.id).map((v) => v.stock);
+    return sizeStocks.length > 0 ? sizeStocks.reduce((sum, s) => sum + s, 0) : Infinity;
+  };
 
-  // Gallery images array (fallback to defaults if no variant is selected)
-  const defaultImages = [
-    primaryImage(product),
-    product.hoverImage || "/images/flatlay/flatlay_1.png",
-    "/images/detail/detail_fabric.png",
-    "/images/lifestyle/lifestyle_interior.png",
-  ];
-
-  const galleryImages = selectedVariant && selectedVariant.images && selectedVariant.images.length > 0
+  // Gallery comes strictly from the selected color's own images; a colorless
+  // product falls back to the flat gallery — never a mix of unrelated colors.
+  const galleryImages = selectedVariant && selectedVariant.images.length > 0
     ? selectedVariant.images
-    : defaultImages;
+    : product.images;
+
+  const displayPrice = selectedVariant?.priceOverride ?? product.price;
 
   const handleColorSelect = (color: string) => {
     setSelectedColor(color);
     const variant = product.colorVariants?.find((v) => v.color === color);
-    if (variant && variant.images && variant.images.length > 0) {
+    if (variant && variant.images.length > 0) {
       setActiveImage(variant.images[0]);
     }
   };
@@ -88,22 +109,28 @@ export default function ProductDetailClient({ params }: PageProps) {
 
   const handleAddToBag = () => {
     if (isOutOfStock) return;
-    if (!selectedColor || !selectedSize) {
+    if ((hasColors && !selectedColor) || !selectedSize) {
       showNotification(
         "يرجى اختيار اللون والمقاس قبل إضافة القطعة إلى الحقيبة",
         "warning"
       );
       return;
     }
+    const matchedColor = product.colorVariants?.find((v) => v.color === selectedColor);
+    const matchedSizeVariant = product.variants.find((v) => v.color === selectedColor && v.size === selectedSize);
     addToCart({
       id: product.id,
       title: product.name,
-      price: product.price,
+      price: displayPrice,
       image: activeImage || primaryImage(product),
       size: selectedSize,
-      color: selectedColor,
+      color: selectedColor || undefined,
       collection: product.collection,
       variantImages: galleryImages,
+      variantId: matchedSizeVariant?.id,
+      sku: matchedSizeVariant?.sku,
+      colorId: matchedColor?.id,
+      colorHex: matchedColor?.value,
     });
     showNotification(
       "تمت إضافة القطعة إلى حقيبتكِ بنجاح",
@@ -196,7 +223,7 @@ export default function ProductDetailClient({ params }: PageProps) {
 
             <div className="flex items-baseline gap-3">
               <span className="font-display text-2xl font-semibold text-accent">
-                {product.price.toLocaleString()} ج.م
+                {displayPrice.toLocaleString()} ج.م
               </span>
               {discountOriginalPrice(product) && (
                 <span className="font-display text-sm text-text-secondary/50 line-through">
@@ -210,37 +237,47 @@ export default function ProductDetailClient({ params }: PageProps) {
             </p>
 
             {/* Colors Swatch Choice */}
-            <div className="flex flex-col gap-2">
-              <label className="text-[10px] font-sans font-bold text-text-secondary">
-                اللون: {selectedColor || "اختاري اللون"}
-              </label>
-              <div className="flex gap-3">
-                {(product.colorVariants || [
-                  { color: "برونزي", value: "#8E6B4B" },
-                  { color: "أسود", value: "#111111" },
-                  { color: "عاجي", value: "#FAF8F5" }
-                ]).map((col) => (
-                  <button
-                    key={col.color}
-                    onClick={() => handleColorSelect(col.color)}
-                    className="relative w-8 h-8 rounded-full border transition-all duration-300 bg-background-primary flex items-center justify-center animate-fade-in"
-                    style={{
-                      borderColor: selectedColor === col.color ? "var(--color-accent-dark)" : "var(--color-brand-border)",
-                      borderWidth: selectedColor === col.color ? "2px" : "1px",
-                      transform: selectedColor === col.color ? "scale(1.05)" : "none",
-                    }}
-                    title={col.color}
-                    aria-label={`اللون: ${col.color}`}
-                    aria-pressed={selectedColor === col.color}
-                  >
-                    <span
-                      className="absolute inset-1 rounded-full border border-black/5 shadow-sm"
-                      style={{ backgroundColor: col.value }}
-                    />
-                  </button>
-                ))}
+            {hasColors && (
+              <div className="flex flex-col gap-2">
+                <label className="text-[10px] font-sans font-bold text-text-secondary">
+                  اللون: {selectedColor || "اختاري اللون"}
+                </label>
+                <div className="flex gap-3">
+                  {(product.colorVariants ?? []).filter((c) => c.isActive !== false).map((col) => {
+                    const isColorOutOfStock = getColorStock(col) <= 0;
+                    return (
+                      <button
+                        key={col.id ?? col.color}
+                        type="button"
+                        onClick={() => !isColorOutOfStock && handleColorSelect(col.color)}
+                        disabled={isColorOutOfStock}
+                        className={`relative w-8 h-8 rounded-full border transition-all duration-300 bg-background-primary flex items-center justify-center animate-fade-in ${
+                          isColorOutOfStock ? "opacity-40 cursor-not-allowed" : ""
+                        }`}
+                        style={{
+                          borderColor: selectedColor === col.color ? "var(--color-accent-dark)" : "var(--color-brand-border)",
+                          borderWidth: selectedColor === col.color ? "2px" : "1px",
+                          transform: selectedColor === col.color ? "scale(1.05)" : "none",
+                        }}
+                        title={isColorOutOfStock ? `${col.color} — غير متوفر حالياً` : col.color}
+                        aria-label={`اللون: ${col.color}${isColorOutOfStock ? " — غير متوفر" : ""}`}
+                        aria-pressed={selectedColor === col.color}
+                      >
+                        <span
+                          className="absolute inset-1 rounded-full border border-black/5 shadow-sm"
+                          style={{ backgroundColor: col.value }}
+                        />
+                        {isColorOutOfStock && (
+                          <span className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                            <span className="w-[120%] h-px bg-text-primary/60 rotate-45" />
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Sizes Box Choice */}
             <div className="flex flex-col gap-2">
@@ -452,6 +489,9 @@ export default function ProductDetailClient({ params }: PageProps) {
         </div>
       </main>
 
+      {/* Reviews & Ratings */}
+      <ProductReviews productId={product.id} productName={product.name} />
+
       {/* Related Products Grid */}
       {relatedProducts.length > 0 && (
       <section className="w-full bg-background-secondary border-t border-brand-border py-16 md:py-24">
@@ -503,7 +543,7 @@ export default function ProductDetailClient({ params }: PageProps) {
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <span className="font-display text-sm text-accent font-semibold">{product.price.toLocaleString()} ج.م</span>
+            <span className="font-display text-sm text-accent font-semibold">{displayPrice.toLocaleString()} ج.م</span>
             <Button
               variant="primary"
               onClick={handleAddToBag}

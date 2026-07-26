@@ -8,6 +8,8 @@ export interface Media {
   height: number;
   size: number;
   folder: string;
+  bucketId: string;
+  storagePath: string;
   url: string;
   thumbnail: string;
   uploadedAt: string;

@@ -12,6 +12,12 @@ export interface CartItem {
   color?: string;
   collection?: string;
   variantImages?: string[];
+  /** Size×color stock row id, resolved at add-to-cart time. */
+  variantId?: string;
+  /** Real variant SKU (falls back to the product id only if no variant matched). */
+  sku?: string;
+  colorId?: string;
+  colorHex?: string;
 }
 
 export interface WishlistItem {

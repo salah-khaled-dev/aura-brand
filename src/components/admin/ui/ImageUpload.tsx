@@ -42,35 +42,40 @@ export function ImageUpload({ images, onChange, multiple = false }: ImageUploadP
     setUploading(true);
     const uploadedUrls: string[] = [];
     try {
+      // Each file is uploaded in isolation so one failure (bad network, RLS, etc.)
+      // can never discard the URLs already uploaded earlier in the same batch.
       for (const file of files) {
         const validationError = validateImageFile(file);
         if (validationError) {
           toast.error(validationError);
           continue;
         }
-        if (await MediaService.existsByName(file.name)) {
-          toast.warning(`تم تجاهل "${file.name}" لوجود ملف بنفس الاسم مسبقًا`);
-          continue;
+        try {
+          const media = await MediaService.uploadMedia(file, { alt: file.name, folder: 'uncategorized' });
+          uploadedUrls.push(media.url);
+        } catch (err) {
+          toast.error(err instanceof Error ? `فشل رفع "${file.name}": ${err.message}` : `فشل رفع "${file.name}"`);
         }
-        const media = await MediaService.uploadMedia(file, { alt: file.name, folder: 'uncategorized' });
-        uploadedUrls.push(media.url);
       }
 
       if (uploadedUrls.length > 0) {
         onChange(multiple ? [...images, ...uploadedUrls] : [uploadedUrls[0]]);
         toast.success(uploadedUrls.length === 1 ? 'تم رفع الصورة بنجاح' : `تم رفع ${uploadedUrls.length} صور بنجاح`);
       }
-    } catch {
-      toast.error('حدث خطأ أثناء الرفع، تحقق من اتصالك وحاول مرة أخرى');
     } finally {
       setUploading(false);
     }
   };
 
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
+    // Snapshot into a plain array before resetting the input's value — resetting
+    // `value` clears the live FileList too, so grabbing a bare reference to
+    // `e.target.files` (instead of copying it first) makes it empty by the time
+    // `processFiles` reads it, silently no-op'ing the whole upload. Same fix
+    // already applied in MediaPicker.tsx's equivalent handler.
+    const files = Array.from(e.target.files || []);
     e.target.value = ''; // allow re-selecting the same file again later
-    if (files && files.length > 0) processFiles(files);
+    if (files.length > 0) processFiles(files);
   };
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {

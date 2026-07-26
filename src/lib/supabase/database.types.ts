@@ -655,6 +655,7 @@ export interface Database {
           cost_price: number | null;
           stats: Json;
           revisions: Json;
+          default_variant_id: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -703,6 +704,7 @@ export interface Database {
           cost_price?: number | null;
           stats?: Json;
           revisions?: Json;
+          default_variant_id?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -751,6 +753,7 @@ export interface Database {
           cost_price?: number | null;
           stats?: Json;
           revisions?: Json;
+          default_variant_id?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -760,6 +763,13 @@ export interface Database {
             columns: ['category_id'];
             isOneToOne: false;
             referencedRelation: 'categories';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'products_default_variant_id_fkey';
+            columns: ['default_variant_id'];
+            isOneToOne: false;
+            referencedRelation: 'product_colors';
             referencedColumns: ['id'];
           },
         ];
@@ -811,6 +821,7 @@ export interface Database {
           size: string;
           color_name: string;
           color_hex: string | null;
+          color_id: string | null;
           sku: string;
           price: number | null;
           sale_price: number | null;
@@ -825,6 +836,7 @@ export interface Database {
           size: string;
           color_name: string;
           color_hex?: string | null;
+          color_id?: string | null;
           sku: string;
           price?: number | null;
           sale_price?: number | null;
@@ -839,6 +851,7 @@ export interface Database {
           size?: string;
           color_name?: string;
           color_hex?: string | null;
+          color_id?: string | null;
           sku?: string;
           price?: number | null;
           sale_price?: number | null;
@@ -853,6 +866,103 @@ export interface Database {
             columns: ['product_id'];
             isOneToOne: false;
             referencedRelation: 'products';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'product_variants_color_id_fkey';
+            columns: ['color_id'];
+            isOneToOne: false;
+            referencedRelation: 'product_colors';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+
+      product_colors: {
+        Row: {
+          id: string;
+          product_id: string;
+          name_ar: string;
+          name_en: string | null;
+          hex: string;
+          sort_order: number;
+          stock: number | null;
+          sku_suffix: string | null;
+          price_override: number | null;
+          is_active: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          product_id: string;
+          name_ar: string;
+          name_en?: string | null;
+          hex: string;
+          sort_order?: number;
+          stock?: number | null;
+          sku_suffix?: string | null;
+          price_override?: number | null;
+          is_active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          product_id?: string;
+          name_ar?: string;
+          name_en?: string | null;
+          hex?: string;
+          sort_order?: number;
+          stock?: number | null;
+          sku_suffix?: string | null;
+          price_override?: number | null;
+          is_active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'product_colors_product_id_fkey';
+            columns: ['product_id'];
+            isOneToOne: false;
+            referencedRelation: 'products';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+
+      product_color_images: {
+        Row: {
+          id: string;
+          color_id: string;
+          url: string;
+          sort_order: number;
+          is_primary: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          color_id: string;
+          url: string;
+          sort_order?: number;
+          is_primary?: boolean;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          color_id?: string;
+          url?: string;
+          sort_order?: number;
+          is_primary?: boolean;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'product_color_images_color_id_fkey';
+            columns: ['color_id'];
+            isOneToOne: false;
+            referencedRelation: 'product_colors';
             referencedColumns: ['id'];
           },
         ];
@@ -1263,6 +1373,8 @@ export interface Database {
           image_url: string | null;
           size: string | null;
           color_name: string | null;
+          color_id: string | null;
+          color_hex: string | null;
           quantity: number;
           unit_price: number;
           total_price: number;
@@ -1278,6 +1390,8 @@ export interface Database {
           image_url?: string | null;
           size?: string | null;
           color_name?: string | null;
+          color_id?: string | null;
+          color_hex?: string | null;
           quantity: number;
           unit_price: number;
           total_price: number;
@@ -1293,6 +1407,8 @@ export interface Database {
           image_url?: string | null;
           size?: string | null;
           color_name?: string | null;
+          color_id?: string | null;
+          color_hex?: string | null;
           quantity?: number;
           unit_price?: number;
           total_price?: number;
@@ -1433,18 +1549,32 @@ export interface Database {
           product_id: string | null;
           product_name: string;
           product_image: string | null;
+          product_color: string | null;
+          product_size: string | null;
           customer_id: string | null;
           customer_name: string;
           customer_email: string;
+          customer_phone: string | null;
           customer_avatar: string | null;
+          order_id: string | null;
+          order_item_id: string | null;
+          order_number: string | null;
           rating: number;
           title: string;
           content: string;
+          size_fit: string | null;
+          recommended: boolean | null;
+          images: string[];
+          has_images: boolean;
+          helpful_count: number;
           status: string;
           is_featured: boolean;
           is_pinned: boolean;
           verified_purchase: boolean;
           admin_reply: string | null;
+          admin_notes: string | null;
+          approved_at: string | null;
+          approved_by: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -1453,18 +1583,30 @@ export interface Database {
           product_id?: string | null;
           product_name?: string;
           product_image?: string | null;
+          product_color?: string | null;
+          product_size?: string | null;
           customer_id?: string | null;
           customer_name: string;
           customer_email?: string;
+          customer_phone?: string | null;
           customer_avatar?: string | null;
+          order_id?: string | null;
+          order_item_id?: string | null;
+          order_number?: string | null;
           rating: number;
           title?: string;
           content: string;
+          size_fit?: string | null;
+          recommended?: boolean | null;
+          images?: string[];
           status?: string;
           is_featured?: boolean;
           is_pinned?: boolean;
           verified_purchase?: boolean;
           admin_reply?: string | null;
+          admin_notes?: string | null;
+          approved_at?: string | null;
+          approved_by?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -1473,18 +1615,30 @@ export interface Database {
           product_id?: string | null;
           product_name?: string;
           product_image?: string | null;
+          product_color?: string | null;
+          product_size?: string | null;
           customer_id?: string | null;
           customer_name?: string;
           customer_email?: string;
+          customer_phone?: string | null;
           customer_avatar?: string | null;
+          order_id?: string | null;
+          order_item_id?: string | null;
+          order_number?: string | null;
           rating?: number;
           title?: string;
           content?: string;
+          size_fit?: string | null;
+          recommended?: boolean | null;
+          images?: string[];
           status?: string;
           is_featured?: boolean;
           is_pinned?: boolean;
           verified_purchase?: boolean;
           admin_reply?: string | null;
+          admin_notes?: string | null;
+          approved_at?: string | null;
+          approved_by?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -1922,6 +2076,31 @@ export interface Database {
       delete_stock_movement: {
         Args: { p_movement_id: string };
         Returns: undefined;
+      };
+      get_product_review_stats: {
+        Args: { p_product_id: string };
+        Returns: {
+          average_rating: number | null;
+          review_count: number;
+          pct_true_to_size: number | null;
+          pct_runs_small: number | null;
+          pct_runs_large: number | null;
+          pct_recommended: number | null;
+        }[];
+      };
+      get_review_admin_stats: {
+        Args: Record<string, never>;
+        Returns: {
+          average_rating: number | null;
+          review_count: number;
+          approval_rate: number | null;
+          most_reviewed_products: Json;
+          lowest_rated_products: Json;
+        }[];
+      };
+      mark_review_helpful: {
+        Args: { p_review_id: string };
+        Returns: number;
       };
     };
 

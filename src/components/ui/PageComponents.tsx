@@ -1,8 +1,12 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
+import Image from "next/image";
 import { motion } from "framer-motion";
+import { IconThumbUp } from "@tabler/icons-react";
 import { scrollFadeUp as fadeUp } from "@/lib/animations";
+import { ImageLightbox } from "@/components/ui/ImageLightbox";
+import { ReviewService } from "@/lib/services/review.service";
 
 export { fadeUp };
 
@@ -173,6 +177,7 @@ export function RatingStars({ rating, size = "md" }: RatingStarsProps) {
    REVIEW CARD
 ───────────────────────────────────────── */
 interface ReviewCardProps {
+  id?: string;
   name: string;
   rating: number;
   text: string;
@@ -182,9 +187,42 @@ interface ReviewCardProps {
   index?: number;
   adminReply?: string;
   verifiedPurchase?: boolean;
+  images?: string[];
+  recommended?: boolean;
+  helpfulCount?: number;
 }
 
-export function ReviewCard({ name, rating, text, product, date, initials, index = 0, adminReply, verifiedPurchase }: ReviewCardProps) {
+export function ReviewCard({
+  id,
+  name,
+  rating,
+  text,
+  product,
+  date,
+  initials,
+  index = 0,
+  adminReply,
+  verifiedPurchase,
+  images,
+  recommended,
+  helpfulCount = 0,
+}: ReviewCardProps) {
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const [votes, setVotes] = useState(helpfulCount);
+  const [voted, setVoted] = useState(() => (id ? ReviewService.hasVotedHelpful(id) : false));
+
+  const handleHelpful = async () => {
+    if (!id || voted) return;
+    setVoted(true);
+    setVotes((v) => v + 1);
+    try {
+      await ReviewService.markHelpful(id);
+    } catch {
+      setVoted(false);
+      setVotes((v) => v - 1);
+    }
+  };
+
   return (
     <motion.article
       initial={{ opacity: 0, y: 28 }}
@@ -223,12 +261,35 @@ export function ReviewCard({ name, rating, text, product, date, initials, index 
         &ldquo;{text}&rdquo;
       </p>
 
-      {/* Product tag */}
-      {product && (
-        <span className="self-start font-sans text-[10px] uppercase tracking-[0.15em] text-accent font-semibold px-3 py-1 border border-accent/30 bg-accent/5">
-          {product}
-        </span>
+      {/* Photos */}
+      {images && images.length > 0 && (
+        <div className="flex gap-2 flex-wrap">
+          {images.map((src, i) => (
+            <button
+              key={src}
+              type="button"
+              onClick={() => setLightboxIndex(i)}
+              className="relative w-14 h-14 border border-brand-border overflow-hidden shrink-0 hover:border-accent/50 transition-colors"
+            >
+              <Image src={src} alt="" fill sizes="56px" loading="lazy" className="object-cover" />
+            </button>
+          ))}
+        </div>
       )}
+
+      {/* Product tag + recommendation */}
+      <div className="flex items-center gap-2 flex-wrap">
+        {product && (
+          <span className="font-sans text-[10px] uppercase tracking-[0.15em] text-accent font-semibold px-3 py-1 border border-accent/30 bg-accent/5">
+            {product}
+          </span>
+        )}
+        {recommended !== undefined && (
+          <span className={`font-sans text-[10px] font-semibold px-3 py-1 border ${recommended ? "text-[#4A7C59] border-[#4A7C59]/30 bg-[#4A7C59]/5" : "text-text-secondary border-brand-border"}`}>
+            {recommended ? "✓ توصي بهذا المنتج" : "لا توصي بهذا المنتج"}
+          </span>
+        )}
+      </div>
 
       {/* Admin reply */}
       {adminReply && (
@@ -240,6 +301,25 @@ export function ReviewCard({ name, rating, text, product, date, initials, index 
             &ldquo;{adminReply}&rdquo;
           </p>
         </div>
+      )}
+
+      {/* Helpful */}
+      {id && (
+        <button
+          type="button"
+          onClick={handleHelpful}
+          disabled={voted}
+          className={`self-start flex items-center gap-1.5 text-[11px] font-sans transition-colors ${
+            voted ? "text-accent" : "text-text-secondary hover:text-accent"
+          } disabled:cursor-default`}
+        >
+          <IconThumbUp size={14} className={voted ? "fill-accent/20" : ""} />
+          مفيد {votes > 0 ? `(${votes})` : ""}
+        </button>
+      )}
+
+      {lightboxIndex !== null && images && (
+        <ImageLightbox images={images} index={lightboxIndex} onClose={() => setLightboxIndex(null)} onIndexChange={setLightboxIndex} />
       )}
     </motion.article>
   );

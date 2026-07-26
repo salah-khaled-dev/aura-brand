@@ -16,6 +16,7 @@ import { Input } from '@/components/admin/design-system/Input';
 import { Button } from '@/components/admin/design-system/Button';
 import { Badge } from '@/components/admin/design-system/Badge';
 import { DataTable, Column } from '@/components/admin/design-system/DataTable';
+import { Modal } from '@/components/admin/design-system/Modal';
 
 // Tabler Icons
 import { 
@@ -39,6 +40,11 @@ export default function CustomersPage() {
     search: '',
     status: 'all',
   });
+
+  const emptyNewCustomer = { firstName: '', lastName: '', email: '', phone: '' };
+  const [newCustomerModalOpen, setNewCustomerModalOpen] = useState(false);
+  const [newCustomerForm, setNewCustomerForm] = useState(emptyNewCustomer);
+  const [creatingCustomer, setCreatingCustomer] = useState(false);
 
   const loadCustomers = async () => {
     setLoading(true);
@@ -96,6 +102,28 @@ export default function CustomersPage() {
       loadCustomers();
     } catch {
       toast.error(adminAr.toasts.unexpectedError);
+    }
+  };
+
+  const handleCreateCustomer = async () => {
+    if (!newCustomerForm.firstName.trim()) { toast.error('الاسم الأول مطلوب'); return; }
+    if (!newCustomerForm.email.trim()) { toast.error('البريد الإلكتروني مطلوب'); return; }
+    setCreatingCustomer(true);
+    try {
+      await CustomerService.createCustomer({
+        firstName: newCustomerForm.firstName,
+        lastName: newCustomerForm.lastName,
+        email: newCustomerForm.email,
+        phone: newCustomerForm.phone,
+      });
+      toast.success('تمت إضافة العميل بنجاح');
+      setNewCustomerModalOpen(false);
+      setNewCustomerForm(emptyNewCustomer);
+      loadCustomers();
+    } catch {
+      toast.error(adminAr.toasts.unexpectedError);
+    } finally {
+      setCreatingCustomer(false);
     }
   };
 
@@ -163,7 +191,7 @@ export default function CustomersPage() {
         title="إدارة العملاء"
         description="تتبع نشاطات عملائك، وتحديث بياناتهم أو حظرهم."
         actions={
-          <Button leftIcon={<IconPlus size={18} />}>
+          <Button leftIcon={<IconPlus size={18} />} onClick={() => setNewCustomerModalOpen(true)}>
             عميل جديد
           </Button>
         }
@@ -263,6 +291,38 @@ export default function CustomersPage() {
           />
         </div>
       </Card>
+
+      <Modal
+        isOpen={newCustomerModalOpen}
+        onClose={() => setNewCustomerModalOpen(false)}
+        title="عميل جديد"
+        size="md"
+        footer={
+          <div className="flex justify-end gap-3">
+            <Button variant="ghost" onClick={() => setNewCustomerModalOpen(false)}>إلغاء</Button>
+            <Button variant="primary" onClick={handleCreateCustomer} isLoading={creatingCustomer}>إضافة</Button>
+          </div>
+        }
+      >
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-1">
+          <div>
+            <label className="block text-sm font-medium text-[var(--admin-text-subtle)] mb-1.5">الاسم الأول</label>
+            <Input value={newCustomerForm.firstName} onChange={e => setNewCustomerForm(f => ({ ...f, firstName: e.target.value }))} />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-[var(--admin-text-subtle)] mb-1.5">اسم العائلة</label>
+            <Input value={newCustomerForm.lastName} onChange={e => setNewCustomerForm(f => ({ ...f, lastName: e.target.value }))} />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-[var(--admin-text-subtle)] mb-1.5">البريد الإلكتروني</label>
+            <Input type="email" value={newCustomerForm.email} onChange={e => setNewCustomerForm(f => ({ ...f, email: e.target.value }))} />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-[var(--admin-text-subtle)] mb-1.5">الهاتف</label>
+            <Input value={newCustomerForm.phone} onChange={e => setNewCustomerForm(f => ({ ...f, phone: e.target.value }))} />
+          </div>
+        </div>
+      </Modal>
 
     </div>
   );

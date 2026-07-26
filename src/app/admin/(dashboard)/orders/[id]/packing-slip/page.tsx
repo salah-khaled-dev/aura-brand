@@ -119,7 +119,19 @@ export default function PackingSlipPage({ params }: { params: Promise<{ id: stri
                 <td className="py-4 px-4 border border-gray-300 font-medium font-sans">{item.sku}</td>
                 <td className="py-4 px-4 border border-gray-300 font-bold">{item.productName}</td>
                 <td className="py-4 px-4 border border-gray-300 text-center">{item.size || '-'}</td>
-                <td className="py-4 px-4 border border-gray-300 text-center">{item.color || '-'}</td>
+                <td className="py-4 px-4 border border-gray-300 text-center">
+                  {item.color ? (
+                    <span className="inline-flex items-center gap-1.5">
+                      {item.colorHex && (
+                        <span
+                          className="inline-block w-2.5 h-2.5 rounded-full border border-gray-400 shrink-0"
+                          style={{ backgroundColor: item.colorHex }}
+                        />
+                      )}
+                      {item.color}
+                    </span>
+                  ) : '-'}
+                </td>
                 <td className="py-4 px-4 border border-gray-300 text-center font-bold text-lg">{item.quantity}</td>
                 <td className="py-4 px-4 border border-gray-300 text-center">
                   <div className="w-6 h-6 border-2 border-gray-400 rounded-sm mx-auto"></div>

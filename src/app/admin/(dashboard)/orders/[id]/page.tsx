@@ -350,7 +350,18 @@ export default function OrderDetailsPage({ params }: { params: Promise<{ id: str
                     <div className="text-xs text-[var(--admin-text-muted)] mt-1.5 flex gap-3">
                       <span>الرمز: <span className="font-medium text-[var(--admin-text-base)]">{item.sku}</span></span>
                       {item.size && <span>المقاس: <span className="font-medium text-[var(--admin-text-base)]">{item.size}</span></span>}
-                      {item.color && <span>اللون: <span className="font-medium text-[var(--admin-text-base)]">{item.color}</span></span>}
+                      {item.color && (
+                        <span className="inline-flex items-center gap-1">
+                          اللون:
+                          {item.colorHex && (
+                            <span
+                              className="inline-block w-2.5 h-2.5 rounded-full border border-black/10 shrink-0"
+                              style={{ backgroundColor: item.colorHex }}
+                            />
+                          )}
+                          <span className="font-medium text-[var(--admin-text-base)]">{item.color}</span>
+                        </span>
+                      )}
                     </div>
                   </div>
                   <div className="text-sm font-medium text-end">

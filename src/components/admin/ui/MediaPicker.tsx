@@ -43,13 +43,6 @@ export function MediaPicker({ open, onClose, onSelect, multiple = false, allowed
     folder: 'all'
   });
 
-  useEffect(() => {
-    if (open) {
-      loadMedia();
-      loadFolders();
-    }
-  }, [open, filters]);
-
   async function loadMedia() {
     setLoading(true);
     try {
@@ -75,6 +68,13 @@ export function MediaPicker({ open, onClose, onSelect, multiple = false, allowed
       console.error(e);
     }
   }
+
+  useEffect(() => {
+    if (open) {
+      loadMedia();
+      loadFolders();
+    }
+  }, [open, filters]);
 
   const handleSelect = (media: Media) => {
     if (multiple) {
@@ -118,28 +118,28 @@ export function MediaPicker({ open, onClose, onSelect, multiple = false, allowed
     setUploading(true);
     let successCount = 0;
     try {
+      // Each file is uploaded in isolation so one failure can't discard the
+      // uploads that already succeeded earlier in the same batch.
       for (const file of files) {
         const validationError = validateImageFile(file);
         if (validationError) {
           toast.error(validationError);
           continue;
         }
-        if (await MediaService.existsByName(file.name)) {
-          toast.warning(`تم تجاهل "${file.name}" لوجود ملف بنفس الاسم مسبقًا`);
-          continue;
+        try {
+          await MediaService.uploadMedia(file, {
+            alt: file.name,
+            folder: filters.folder !== 'all' ? filters.folder : 'uncategorized',
+          });
+          successCount++;
+        } catch (err) {
+          toast.error(err instanceof Error ? `فشل رفع "${file.name}": ${err.message}` : `فشل رفع "${file.name}"`);
         }
-        await MediaService.uploadMedia(file, {
-          alt: file.name,
-          folder: filters.folder !== 'all' ? filters.folder : 'uncategorized',
-        });
-        successCount++;
       }
       if (successCount > 0) {
         toast.success(successCount === 1 ? 'تم رفع الصورة بنجاح' : `تم رفع ${successCount} صور بنجاح`);
         await loadMedia();
       }
-    } catch {
-      toast.error('حدث خطأ أثناء الرفع، حاول مرة أخرى');
     } finally {
       setUploading(false);
     }

@@ -4,11 +4,12 @@ import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import {
   IconStar, IconTrash, IconCheck, IconX, IconArchive, IconMessage,
-  IconEyeOff, IconPinFilled, IconPin, IconUserCheck
+  IconEyeOff, IconPinFilled, IconPin, IconUserCheck, IconPhoto, IconNotes
 } from '@tabler/icons-react';
-import { ReviewService, Review } from '@/lib/services/review.service';
+import { ReviewService, Review, ReviewAdminStats } from '@/lib/services/review.service';
 import { EntityDeleteDialog } from '@/components/admin/crud/EntityDialogs';
 import { useEventSubscribeMany } from '@/hooks/useEventBus';
+import { ImageLightbox } from '@/components/ui/ImageLightbox';
 
 import { PageHeader, EmptyState } from '@/components/admin/design-system/Layout';
 import { Button } from '@/components/admin/design-system/Button';
@@ -30,6 +31,14 @@ const STATUS_VARIANTS: Record<Review['status'], 'success' | 'danger' | 'warning'
   hidden: 'neutral'
 };
 
+const SIZE_FIT_LABELS: Record<string, string> = {
+  runs_small: 'أصغر من المقاس',
+  true_to_size: 'المقاس مطابق',
+  runs_large: 'أكبر من المقاس',
+};
+
+type SortOrder = 'newest' | 'oldest' | 'highest' | 'lowest';
+
 function StarRating({ rating }: { rating: number }) {
   return (
     <div className="flex items-center gap-0.5">
@@ -50,17 +59,34 @@ function Avatar({ name, src }: { name: string; src?: string }) {
   );
 }
 
+function StatCard({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="bg-[var(--admin-bg-elevated)] border border-[var(--admin-border-light)] rounded-[var(--admin-radius-lg)] p-4">
+      <p className="text-[10px] uppercase font-bold text-[var(--admin-text-subtle)] mb-1">{label}</p>
+      <p className="text-lg font-bold text-[var(--admin-text-base)] tabular-nums">{value}</p>
+    </div>
+  );
+}
+
 export default function ReviewsPage() {
   const [reviews, setReviews] = useState<Review[]>([]);
+  const [stats, setStats] = useState<ReviewAdminStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedIds, setSelectedIds] = useState<(string | number)[]>([]);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | Review['status']>('all');
+  const [productFilter, setProductFilter] = useState('all');
+  const [starFilter, setStarFilter] = useState<'all' | number>('all');
+  const [sizeFitFilter, setSizeFitFilter] = useState<'all' | Review['sizeFit']>('all');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('newest');
   const [detailReview, setDetailReview] = useState<Review | null>(null);
   const [replyDraft, setReplyDraft] = useState('');
+  const [notesDraft, setNotesDraft] = useState('');
   const [savingReply, setSavingReply] = useState(false);
+  const [savingNotes, setSavingNotes] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState<{ isOpen: boolean; id: string | null }>({ isOpen: false, id: null });
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const [lightbox, setLightbox] = useState<{ images: string[]; index: number } | null>(null);
 
   const loadReviews = async () => {
     setLoading(true);
@@ -74,12 +100,21 @@ export default function ReviewsPage() {
     }
   };
 
-  useEffect(() => { loadReviews(); }, []);
-  useEventSubscribeMany(['reviews.changed', 'review.submitted', 'review.approved', 'review.rejected'], loadReviews);
+  const loadStats = async () => {
+    try {
+      setStats(await ReviewService.getAdminStats());
+    } catch {
+      // stats strip stays hidden on failure — non-critical
+    }
+  };
+
+  useEffect(() => { loadReviews(); loadStats(); }, []);
+  useEventSubscribeMany(['reviews.changed', 'review.submitted', 'review.approved', 'review.rejected'], () => { loadReviews(); loadStats(); });
 
   const openDetail = (review: Review) => {
     setDetailReview(review);
     setReplyDraft(review.adminReply ?? '');
+    setNotesDraft(review.adminNotes ?? '');
   };
 
   const saveReply = async () => {
@@ -97,12 +132,28 @@ export default function ReviewsPage() {
     }
   };
 
+  const saveNotes = async () => {
+    if (!detailReview) return;
+    setSavingNotes(true);
+    try {
+      const updated = await ReviewService.updateAdminNotes(detailReview.id, notesDraft.trim() || null);
+      setDetailReview(updated);
+      toast.success('تم حفظ الملاحظات الداخلية');
+      loadReviews();
+    } catch {
+      toast.error("حدث خطأ أثناء حفظ الملاحظات");
+    } finally {
+      setSavingNotes(false);
+    }
+  };
+
   const handleStatusChange = async (id: string, status: Review['status']) => {
     try {
       await ReviewService.updateReviewStatus(id, status);
       toast.success(STATUS_LABELS[status]);
       if (detailReview?.id === id) setDetailReview(prev => prev ? { ...prev, status } : null);
       loadReviews();
+      loadStats();
     } catch { toast.error("حدث خطأ"); }
   };
 
@@ -120,6 +171,16 @@ export default function ReviewsPage() {
       if (detailReview?.id === id) setDetailReview(updated);
       loadReviews();
     } catch { toast.error("حدث خطأ"); }
+  };
+
+  const handleRemoveImage = async (imageUrl: string) => {
+    if (!detailReview) return;
+    try {
+      const updated = await ReviewService.removeReviewImage(detailReview.id, imageUrl);
+      setDetailReview(updated);
+      toast.success('تم حذف الصورة');
+      loadReviews();
+    } catch { toast.error("حدث خطأ أثناء حذف الصورة"); }
   };
 
   const handleDeleteSelected = async () => {
@@ -147,17 +208,21 @@ export default function ReviewsPage() {
     }
   };
 
+  const productOptions = Array.from(new Set(reviews.map(r => r.productName).filter(Boolean))).sort();
+
   const columns: Column<Review>[] = [
     {
       header: 'العميل',
       accessor: 'customerName',
       type: 'custom',
       render: (_, row) => (
-        <div className="flex items-center gap-2.5 min-w-[160px]">
+        <div className="flex items-center gap-2.5 min-w-[170px]">
           <Avatar name={row.customerName} src={row.customerAvatar} />
           <div>
             <p className="font-bold text-sm text-[var(--admin-text-base)]">{row.customerName}</p>
             <p className="text-[11px] text-[var(--admin-text-subtle)]">{row.customerEmail}</p>
+            {row.customerPhone && <p className="text-[11px] text-[var(--admin-text-subtle)]" dir="ltr">{row.customerPhone}</p>}
+            {row.orderNumber && <p className="text-[10px] text-[var(--admin-primary)] font-semibold mt-0.5">{row.orderNumber}</p>}
           </div>
         </div>
       )
@@ -174,6 +239,14 @@ export default function ReviewsPage() {
               <IconUserCheck size={11} /> مشترٍ موثّق
             </span>
           )}
+          {row.sizeFit && (
+            <span className="text-[10px] text-[var(--admin-text-subtle)]">{SIZE_FIT_LABELS[row.sizeFit]}</span>
+          )}
+          {row.recommended !== undefined && (
+            <span className={`text-[10px] font-semibold ${row.recommended ? 'text-[var(--admin-success)]' : 'text-[var(--admin-text-subtle)]'}`}>
+              {row.recommended ? '✓ توصي' : '✗ لا توصي'}
+            </span>
+          )}
         </div>
       )
     },
@@ -182,7 +255,7 @@ export default function ReviewsPage() {
       accessor: 'content',
       type: 'custom',
       render: (_, row) => (
-        <div className="max-w-[280px]">
+        <div className="max-w-[260px]">
           <p className="font-bold text-sm truncate text-[var(--admin-text-base)]">{row.title}</p>
           <p className="text-xs text-[var(--admin-text-subtle)] truncate mt-0.5">{row.content}</p>
           {row.adminReply && (
@@ -196,12 +269,40 @@ export default function ReviewsPage() {
       accessor: 'productName',
       type: 'custom',
       render: (_, row) => (
-        <div className="flex items-center gap-2 min-w-[120px]">
+        <div className="flex items-center gap-2 min-w-[130px]">
           {row.productImage && (
             <img src={row.productImage} alt="" className="w-8 h-10 object-cover rounded border border-[var(--admin-border-light)] shrink-0" />
           )}
-          <p className="text-xs text-[var(--admin-text-base)] line-clamp-2">{row.productName}</p>
+          <div>
+            <p className="text-xs text-[var(--admin-text-base)] line-clamp-2">{row.productName}</p>
+            {(row.productColor || row.productSize) && (
+              <p className="text-[10px] text-[var(--admin-text-subtle)]">
+                {row.productColor}{row.productColor && row.productSize ? ' / ' : ''}{row.productSize}
+              </p>
+            )}
+          </div>
         </div>
+      )
+    },
+    {
+      header: 'الصور',
+      accessor: 'images',
+      type: 'custom',
+      render: (_, row) => row.images.length === 0 ? (
+        <span className="text-[10px] text-[var(--admin-text-subtle)]">—</span>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setLightbox({ images: row.images, index: 0 })}
+          className="relative w-9 h-9 rounded border border-[var(--admin-border-light)] overflow-hidden"
+        >
+          <img src={row.images[0]} alt="" className="w-full h-full object-cover" />
+          {row.images.length > 1 && (
+            <span className="absolute inset-0 bg-black/40 text-white text-[10px] font-bold flex items-center justify-center">
+              +{row.images.length - 1}
+            </span>
+          )}
+        </button>
       )
     },
     {
@@ -272,17 +373,45 @@ export default function ReviewsPage() {
     }
   ];
 
-  const filteredData = reviews.filter(r => {
-    const matchesSearch = r.customerName.toLowerCase().includes(search.toLowerCase()) ||
-      r.content.toLowerCase().includes(search.toLowerCase()) ||
-      r.productName.toLowerCase().includes(search.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || r.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+  const filteredData = reviews
+    .filter(r => {
+      const q = search.toLowerCase();
+      const matchesSearch = !q ||
+        r.customerName.toLowerCase().includes(q) ||
+        r.content.toLowerCase().includes(q) ||
+        r.productName.toLowerCase().includes(q) ||
+        (r.orderNumber ?? '').toLowerCase().includes(q) ||
+        (r.customerPhone ?? '').toLowerCase().includes(q);
+      const matchesStatus = statusFilter === 'all' || r.status === statusFilter;
+      const matchesProduct = productFilter === 'all' || r.productName === productFilter;
+      const matchesStars = starFilter === 'all' || r.rating === starFilter;
+      const matchesSizeFit = sizeFitFilter === 'all' || r.sizeFit === sizeFitFilter;
+      return matchesSearch && matchesStatus && matchesProduct && matchesStars && matchesSizeFit;
+    })
+    .sort((a, b) => {
+      switch (sortOrder) {
+        case 'oldest': return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        case 'highest': return b.rating - a.rating;
+        case 'lowest': return a.rating - b.rating;
+        default: return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      }
+    });
 
   return (
     <div className="p-4 md:p-6 lg:p-8 max-w-7xl mx-auto space-y-6 fade-in">
       <PageHeader title="إدارة التقييمات" description="مراجعة واعتماد تقييمات العملاء، الردود الإدارية، وإدارة الظهور" />
+
+      {stats && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <StatCard label="متوسط التقييم" value={stats.averageRating ?? '—'} />
+          <StatCard label="إجمالي التقييمات" value={stats.reviewCount} />
+          <StatCard label="نسبة القبول" value={stats.approvalRate !== null ? `${stats.approvalRate}%` : '—'} />
+          <StatCard
+            label="الأكثر تقييماً"
+            value={stats.mostReviewedProducts[0] ? `${stats.mostReviewedProducts[0].product_name} (${stats.mostReviewedProducts[0].review_count})` : '—'}
+          />
+        </div>
+      )}
 
       <div className="flex flex-wrap gap-3">
         {(['all', 'pending', 'approved', 'rejected', 'hidden'] as const).map(s => (
@@ -298,6 +427,27 @@ export default function ReviewsPage() {
             {s === 'all' ? 'الكل' : STATUS_LABELS[s]}
           </button>
         ))}
+      </div>
+
+      <div className="flex flex-wrap gap-3 items-center">
+        <select value={productFilter} onChange={e => setProductFilter(e.target.value)} className="h-9 px-3 rounded-[var(--admin-radius-md)] text-xs border border-[var(--admin-border-base)] bg-[var(--admin-bg-surface)] text-[var(--admin-text-base)]">
+          <option value="all">كل المنتجات</option>
+          {productOptions.map(p => <option key={p} value={p}>{p}</option>)}
+        </select>
+        <select value={starFilter} onChange={e => setStarFilter(e.target.value === 'all' ? 'all' : Number(e.target.value))} className="h-9 px-3 rounded-[var(--admin-radius-md)] text-xs border border-[var(--admin-border-base)] bg-[var(--admin-bg-surface)] text-[var(--admin-text-base)]">
+          <option value="all">كل التقييمات</option>
+          {[5, 4, 3, 2, 1].map(s => <option key={s} value={s}>{s} نجوم</option>)}
+        </select>
+        <select value={sizeFitFilter ?? 'all'} onChange={e => setSizeFitFilter(e.target.value === 'all' ? 'all' : e.target.value as Review['sizeFit'])} className="h-9 px-3 rounded-[var(--admin-radius-md)] text-xs border border-[var(--admin-border-base)] bg-[var(--admin-bg-surface)] text-[var(--admin-text-base)]">
+          <option value="all">كل المقاسات</option>
+          {Object.entries(SIZE_FIT_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+        </select>
+        <select value={sortOrder} onChange={e => setSortOrder(e.target.value as SortOrder)} className="h-9 px-3 rounded-[var(--admin-radius-md)] text-xs border border-[var(--admin-border-base)] bg-[var(--admin-bg-surface)] text-[var(--admin-text-base)]">
+          <option value="newest">الأحدث</option>
+          <option value="oldest">الأقدم</option>
+          <option value="highest">الأعلى تقييماً</option>
+          <option value="lowest">الأقل تقييماً</option>
+        </select>
       </div>
 
       {selectedIds.length > 0 && (
@@ -361,6 +511,8 @@ export default function ReviewsPage() {
                   <Badge variant={STATUS_VARIANTS[detailReview.status]} size="sm">{STATUS_LABELS[detailReview.status]}</Badge>
                 </div>
                 <p className="text-xs text-[var(--admin-text-subtle)]">{detailReview.customerEmail}</p>
+                {detailReview.customerPhone && <p className="text-xs text-[var(--admin-text-subtle)]" dir="ltr">{detailReview.customerPhone}</p>}
+                {detailReview.orderNumber && <p className="text-xs text-[var(--admin-primary)] font-semibold">الطلب: {detailReview.orderNumber}</p>}
                 <StarRating rating={detailReview.rating} />
               </div>
               <span className="text-xs text-[var(--admin-text-subtle)] shrink-0">
@@ -368,10 +520,42 @@ export default function ReviewsPage() {
               </span>
             </div>
 
+            <div className="flex flex-wrap gap-2">
+              {detailReview.sizeFit && <Badge variant="neutral" size="sm">{SIZE_FIT_LABELS[detailReview.sizeFit]}</Badge>}
+              {detailReview.recommended !== undefined && (
+                <Badge variant={detailReview.recommended ? 'success' : 'neutral'} size="sm">
+                  {detailReview.recommended ? '✓ توصي بالمنتج' : '✗ لا توصي بالمنتج'}
+                </Badge>
+              )}
+            </div>
+
             <div className="p-4 bg-[var(--admin-bg-elevated)] rounded-[var(--admin-radius-lg)] border border-[var(--admin-border-light)]">
               <p className="font-bold text-sm text-[var(--admin-text-base)] mb-1">{detailReview.title}</p>
               <p className="text-sm text-[var(--admin-text-muted)] leading-relaxed">{detailReview.content}</p>
             </div>
+
+            {detailReview.images.length > 0 && (
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-[var(--admin-text-base)] flex items-center gap-1.5"><IconPhoto size={16} /> الصور المرفقة</label>
+                <div className="flex flex-wrap gap-2">
+                  {detailReview.images.map((url, idx) => (
+                    <div key={url} className="relative w-16 h-16 rounded border border-[var(--admin-border-light)] overflow-hidden group">
+                      <button type="button" onClick={() => setLightbox({ images: detailReview.images, index: idx })} className="w-full h-full">
+                        <img src={url} alt="" className="w-full h-full object-cover" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveImage(url)}
+                        title="حذف هذه الصورة"
+                        className="absolute top-0.5 right-0.5 bg-[var(--admin-danger)] text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <IconX size={12} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="flex items-center gap-3 p-3 bg-[var(--admin-bg-elevated)] rounded-[var(--admin-radius-md)] border border-[var(--admin-border-light)]">
               {detailReview.productImage && (
@@ -380,13 +564,18 @@ export default function ReviewsPage() {
               <div>
                 <p className="text-xs text-[var(--admin-text-muted)]">المنتج المراجَع</p>
                 <p className="text-sm font-semibold text-[var(--admin-text-base)]">{detailReview.productName}</p>
+                {(detailReview.productColor || detailReview.productSize) && (
+                  <p className="text-xs text-[var(--admin-text-subtle)]">
+                    {detailReview.productColor}{detailReview.productColor && detailReview.productSize ? ' / ' : ''}{detailReview.productSize}
+                  </p>
+                )}
               </div>
             </div>
 
             <div className="space-y-2">
               <label className="text-sm font-bold text-[var(--admin-text-base)]">رد المشرف (يظهر أمام التقييم في المتجر)</label>
               <textarea
-                rows={4}
+                rows={3}
                 value={replyDraft}
                 onChange={(e) => setReplyDraft(e.target.value)}
                 placeholder="اكتب رداً على هذا التقييم..."
@@ -395,6 +584,18 @@ export default function ReviewsPage() {
               {replyDraft.trim() && (
                 <button onClick={() => setReplyDraft('')} className="text-xs text-[var(--admin-danger)] hover:underline">مسح الرد</button>
               )}
+            </div>
+
+            <div className="space-y-2 pt-2 border-t border-[var(--admin-border-light)]">
+              <label className="text-sm font-bold text-[var(--admin-text-base)] flex items-center gap-1.5"><IconNotes size={16} /> ملاحظات داخلية (لا تظهر للعميل)</label>
+              <textarea
+                rows={2}
+                value={notesDraft}
+                onChange={(e) => setNotesDraft(e.target.value)}
+                placeholder="ملاحظات لفريق العمل فقط..."
+                className="w-full px-3 py-2 border border-[var(--admin-border-base)] rounded-[var(--admin-radius-md)] bg-[var(--admin-bg-base)] outline-none focus:border-[var(--admin-primary)] resize-y text-sm text-[var(--admin-text-base)]"
+              />
+              <Button size="sm" variant="secondary" isLoading={savingNotes} onClick={saveNotes}>حفظ الملاحظات</Button>
             </div>
 
             <div className="flex items-center gap-4 pt-2 border-t border-[var(--admin-border-light)]">
@@ -423,6 +624,15 @@ export default function ReviewsPage() {
         }
         isProcessing={isBulkDeleting}
       />
+
+      {lightbox && (
+        <ImageLightbox
+          images={lightbox.images}
+          index={lightbox.index}
+          onClose={() => setLightbox(null)}
+          onIndexChange={(index) => setLightbox((prev) => (prev ? { ...prev, index } : prev))}
+        />
+      )}
     </div>
   );
 }

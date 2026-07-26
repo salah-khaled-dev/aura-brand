@@ -744,24 +744,22 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Bottom row: Testimonials & Trust */}
-          <div className="border-t border-brand-border pt-16 flex flex-col items-center text-center">
-            <span className="font-sans text-[10px] text-accent font-bold uppercase tracking-[0.2em] mb-4">آراء وثقة صالون أورا</span>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-[900px] w-full mt-2" dir="rtl">
-              <div className="bg-background-secondary p-6 border border-brand-border flex flex-col gap-3 justify-center text-right">
-                <p className="font-sans text-xs text-text-secondary font-light italic leading-relaxed">
-                  &quot;تصاميم دار أورا تعبر عن الأناقة الهادئة والفريدة. الكتان المعالج مريح للغاية والقصات الهندسية تمنح حضورًا راقيًا وثقة عالية في كل مناسبة.&quot;
-                </p>
-                <span className="font-sans text-[10px] text-accent font-bold">— ياسمين الشافعي، عميلة صالون أورا الخاص</span>
-              </div>
-              <div className="bg-background-secondary p-6 border border-brand-border flex flex-col gap-3 justify-center text-right">
-                <p className="font-sans text-xs text-text-secondary font-light italic leading-relaxed">
-                  &quot;تفاصيل الخياطة اليدوية دقيقة للغاية في فستان الحرير الذي اقتنيته. إنه تجسيد للحرفية والموضة البطيئة الراقية بكل فخر في مصر.&quot;
-                </p>
-                <span className="font-sans text-[10px] text-accent font-bold">— نورة آل سعود، عضو صالون أورا البريدي</span>
+          {/* Bottom row: Testimonials & Trust — real approved reviews only, hidden with none yet */}
+          {testimonialReviews.length > 0 && (
+            <div className="border-t border-brand-border pt-16 flex flex-col items-center text-center">
+              <span className="font-sans text-[10px] text-accent font-bold uppercase tracking-[0.2em] mb-4">آراء وثقة صالون أورا</span>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-[900px] w-full mt-2" dir="rtl">
+                {testimonialReviews.slice(0, 2).map((r) => (
+                  <div key={r.id} className="bg-background-secondary p-6 border border-brand-border flex flex-col gap-3 justify-center text-right">
+                    <p className="font-sans text-xs text-text-secondary font-light italic leading-relaxed">
+                      &quot;{r.text}&quot;
+                    </p>
+                    <span className="font-sans text-[10px] text-accent font-bold">— {r.name}</span>
+                  </div>
+                ))}
               </div>
             </div>
-          </div>
+          )}
 
         </div>
       </motion.section>

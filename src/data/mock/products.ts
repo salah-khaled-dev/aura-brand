@@ -8,6 +8,7 @@ export interface ProductVariant {
   id: string;
   sku: string;
   color: string;
+  colorId?: string;
   size: string;
   price: number;
   cost?: number;
@@ -116,6 +117,8 @@ export interface Product {
   colors?: string[];
   sizes?: string[];
   colorVariants?: ProductColorVariant[];
+  /** Single source of truth for "which color is default" — set on `products`, not on the color itself. */
+  defaultVariantId?: string;
 }
 
 // --- Tiny canonical-field helpers (shared by storefront surfaces; no second model) ---

@@ -4,11 +4,12 @@ import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import Logo from "@/components/Logo";
 import { motion } from "framer-motion";
-import { IconPlus as Plus, IconMinus as Minus, IconBrandFacebook, IconBrandInstagram } from "@tabler/icons-react";
+import { IconPlus as Plus, IconMinus as Minus, IconBrandFacebook, IconBrandInstagram, IconTruckDelivery, IconDeviceMobile, IconWallet } from "@tabler/icons-react";
 import { useNotification } from "@/context/NotificationContext";
 import { SocialIconButton } from "@/components/ui/AnimatedIcon";
 import { FooterService, FooterSettings } from "@/lib/services/storefront/footer.service";
 import { StoreService } from "@/lib/services/storefront/store.service";
+import { SettingsService } from "@/lib/services/settings.service";
 import { useEventSubscribeMany } from "@/hooks/useEventBus";
 
 /* ─────────────── Social SVG icons ─────────────── */
@@ -139,6 +140,8 @@ export default function Footer() {
   const [developerCredit, setDeveloperCredit] = useState('صلاح خالد');
   const [showNewsletter, setShowNewsletter] = useState(true);
   const [showSocialIcons, setShowSocialIcons] = useState(true);
+  const [showPaymentIcons, setShowPaymentIcons] = useState(true);
+  const [paymentMethods, setPaymentMethods] = useState<{ label: string; Icon: React.FC }[]>([]);
 
   const SOCIAL_ICON_MAP: Record<string, React.FC> = {
     facebook: SocialIcons.Facebook,
@@ -150,9 +153,10 @@ export default function Footer() {
 
   const loadFooterData = useCallback(async () => {
     try {
-      const [footerSettings, storeInfo] = await Promise.all([
+      const [footerSettings, storeInfo, settings] = await Promise.all([
         FooterService.getSettings(),
         StoreService.getInfo(),
+        SettingsService.getSettings(),
       ]);
 
       if (footerSettings.columns?.length) {
@@ -170,6 +174,13 @@ export default function Footer() {
       if (footerSettings.developerCredit) setDeveloperCredit(footerSettings.developerCredit);
       setShowNewsletter(footerSettings.showNewsletter ?? true);
       setShowSocialIcons(footerSettings.showSocialIcons ?? true);
+      setShowPaymentIcons(footerSettings.showPaymentIcons ?? true);
+
+      const enabledMethods: { label: string; Icon: React.FC }[] = [];
+      if (settings.payment.enableCOD) enabledMethods.push({ label: 'الدفع عند الاستلام', Icon: () => <IconTruckDelivery stroke={1.4} className="w-4 h-4" /> });
+      if (settings.payment.enableVodafoneCash) enabledMethods.push({ label: 'فودافون كاش', Icon: () => <IconDeviceMobile stroke={1.4} className="w-4 h-4" /> });
+      if (settings.payment.enableInstapay) enabledMethods.push({ label: 'InstaPay', Icon: () => <IconWallet stroke={1.4} className="w-4 h-4" /> });
+      setPaymentMethods(enabledMethods);
 
       if (storeInfo?.socialMedia) {
         const sm = storeInfo.socialMedia;
@@ -297,6 +308,22 @@ export default function Footer() {
           transition={{ duration: 1, ease: "easeOut" }}
           className="py-6 md:py-8 flex flex-col-reverse md:flex-row items-center justify-between gap-5"
         >
+
+          {/* Payment methods */}
+          {showPaymentIcons && paymentMethods.length > 0 && (
+            <div className="flex items-center gap-3 order-first md:order-none">
+              {paymentMethods.map(({ Icon, label }) => (
+                <div
+                  key={label}
+                  title={label}
+                  className="flex items-center gap-1.5 h-7 px-2.5 rounded-full border border-[#EAE3D9] text-text-secondary"
+                >
+                  <Icon />
+                  <span className="text-[9px] font-sans font-medium whitespace-nowrap">{label}</span>
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* Copyright */}
           <div className="flex flex-col items-center md:items-start gap-2.5">

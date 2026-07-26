@@ -253,12 +253,15 @@ export default function CheckoutPage() {
         items: cart.map((item) => ({
           productId: String(item.id),
           productName: item.title,
-          sku: String(item.id),
+          sku: item.sku || String(item.id),
           quantity: item.quantity,
           price: item.price,
           image: item.image,
           size: item.size,
           color: item.color,
+          variantId: item.variantId,
+          colorId: item.colorId,
+          colorHex: item.colorHex,
         })),
       });
 

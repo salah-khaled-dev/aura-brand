@@ -1,7 +1,19 @@
 export interface ProductColorVariant {
+  /** DB id once persisted; absent for a color the admin has drafted but not yet saved. */
+  id?: string;
+  /** Arabic name — the field storefront code matches/display on. */
   color: string;
+  colorEn?: string;
+  /** Hex code, e.g. "#111111". */
   value: string;
   images: string[];
+  sortOrder?: number;
+  stock?: number;
+  skuSuffix?: string;
+  priceOverride?: number;
+  /** Computed from `Product.defaultVariantId` — never persisted on the color itself. */
+  isDefault?: boolean;
+  isActive?: boolean;
 }
 
 export type ProductStockStatus = "in_stock" | "low_stock" | "out_of_stock";

@@ -22,7 +22,7 @@ export interface CreateOrderInput {
   customerName: string;
   customerEmail: string;
   customerPhone?: string;
-  items: Array<{ productId: string; productName: string; sku: string; quantity: number; price: number; variantId?: string; image?: string; size?: string; color?: string }>;
+  items: Array<{ productId: string; productName: string; sku: string; quantity: number; price: number; variantId?: string; image?: string; size?: string; color?: string; colorId?: string; colorHex?: string }>;
   shippingAddress?: string;
   shipping?: number;
   taxRate?: number;       // e.g. 0.15
@@ -80,6 +80,8 @@ function rowToItem(row: OrderItemRow): OrderItem {
     image: row.image_url ?? undefined,
     size: row.size ?? undefined,
     color: row.color_name ?? undefined,
+    colorId: row.color_id ?? undefined,
+    colorHex: row.color_hex ?? undefined,
   };
 }
 
@@ -259,6 +261,8 @@ class SupabaseOrderRepositoryImpl implements IOrderRepository {
       image: it.image,
       size: it.size,
       color: it.color,
+      colorId: it.colorId,
+      colorHex: it.colorHex,
     }));
     const subtotal = items.reduce((sum, it) => sum + it.total, 0);
     const discount = input.discount ?? 0;
@@ -305,6 +309,8 @@ class SupabaseOrderRepositoryImpl implements IOrderRepository {
       image_url: it.image ?? null,
       size: it.size ?? null,
       color_name: it.color ?? null,
+      color_id: it.colorId ?? null,
+      color_hex: it.colorHex ?? null,
       quantity: it.quantity,
       unit_price: it.price,
       total_price: it.total,

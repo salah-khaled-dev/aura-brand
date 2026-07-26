@@ -17,6 +17,8 @@ import { ContentService } from "@/lib/services/storefront/content.service";
 import { StoreService, type StoreInfo } from "@/lib/services/storefront/store.service";
 import InvoiceView from "@/components/invoice/InvoiceView";
 import { IconFileText, IconChevronDown } from "@tabler/icons-react";
+import { OrderItemReviewCard } from "@/components/tracking/OrderItemReviewCard";
+import { ReviewService, OrderReviewEligibility } from "@/lib/services/review.service";
 
 type SearchStatus = "idle" | "loading" | "found" | "error";
 
@@ -46,6 +48,7 @@ function TrackingContent({ c, whatsappUrl, storeInfo }: { c: typeof DEFAULT_CONT
   const [order, setOrder] = useState<Order | null>(null);
   const [showInvoice, setShowInvoice] = useState(false);
   const [trackingCopied, setTrackingCopied] = useState(false);
+  const [reviewEligibility, setReviewEligibility] = useState<OrderReviewEligibility | null>(null);
 
   const handleCopyTracking = async () => {
     if (!order?.trackingNumber) return;
@@ -114,6 +117,26 @@ function TrackingContent({ c, whatsappUrl, storeInfo }: { c: typeof DEFAULT_CONT
       supabase.removeChannel(channel);
     };
   }, [order?.id, order?.orderNumber, order?.customerPhone, order?.customerEmail, contact, lookup]);
+
+  const loadReviewEligibility = useCallback(async () => {
+    if (!order || order.status !== "delivered") {
+      setReviewEligibility(null);
+      return;
+    }
+    try {
+      const result = await ReviewService.getOrderReviewEligibility(
+        order.orderNumber,
+        order.customerPhone || order.customerEmail || contact
+      );
+      setReviewEligibility(result);
+    } catch {
+      setReviewEligibility(null);
+    }
+  }, [order, contact]);
+
+  useEffect(() => {
+    loadReviewEligibility();
+  }, [loadReviewEligibility]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -298,8 +321,20 @@ function TrackingContent({ c, whatsappUrl, storeInfo }: { c: typeof DEFAULT_CONT
                       </div>
                       <div className="flex-grow min-w-0">
                         <h4 className="font-sans text-xs font-semibold text-text-primary truncate">{item.productName}</h4>
-                        <span className="text-[10px] text-text-secondary font-light block mt-0.5">
-                          {item.size ? `المقاس: ${item.size}` : ""}{item.size && item.color ? " | " : ""}{item.color ? `اللون: ${item.color}` : ""}{(item.size || item.color) ? " | " : ""}العدد: {item.quantity}
+                        <span className="text-[10px] text-text-secondary font-light flex items-center gap-1 mt-0.5">
+                          {item.size ? `المقاس: ${item.size}` : ""}{item.size && item.color ? " | " : ""}
+                          {item.color ? (
+                            <span className="inline-flex items-center gap-1">
+                              {item.colorHex && (
+                                <span
+                                  className="inline-block w-2 h-2 rounded-full border border-black/10 shrink-0"
+                                  style={{ backgroundColor: item.colorHex }}
+                                />
+                              )}
+                              {`اللون: ${item.color}`}
+                            </span>
+                          ) : ""}
+                          {(item.size || item.color) ? " | " : ""}العدد: {item.quantity}
                         </span>
                       </div>
                       <span className="font-display text-xs font-bold text-accent shrink-0">
@@ -370,6 +405,27 @@ function TrackingContent({ c, whatsappUrl, storeInfo }: { c: typeof DEFAULT_CONT
                   <span className="font-sans text-xs font-semibold text-text-primary">{formatArDate(order.updatedAt)}</span>
                 </div>
               </div>
+
+              {/* Product reviews — only once the order is delivered */}
+              {reviewEligibility && reviewEligibility.items.some((i) => i.eligible) && (
+                <div className="bg-background-secondary border border-brand-border p-6 md:p-8 flex flex-col gap-6" dir="rtl">
+                  <div>
+                    <span className="font-sans text-[10px] uppercase tracking-[0.2em] text-accent font-bold">تجربتكِ مهمة لنا</span>
+                    <h3 className="font-sans text-lg font-bold text-text-primary mt-1">قيّمي مقتنياتكِ</h3>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    {reviewEligibility.items.filter((i) => i.eligible).map((item) => (
+                      <OrderItemReviewCard
+                        key={item.orderItemId}
+                        item={item}
+                        orderNumber={reviewEligibility.orderNumber}
+                        contact={order.customerPhone || order.customerEmail || contact}
+                        onChanged={loadReviewEligibility}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Invoice */}
               <div className="bg-background-secondary border border-brand-border p-6 md:p-8" dir="rtl">

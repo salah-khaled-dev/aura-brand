@@ -306,7 +306,12 @@ export function AuraInvoiceDocument({ order, storeInfo, qrCodeDataUrl }: AuraInv
                 <View style={styles.colName}>
                   <Text style={styles.td}>{item.productName}</Text>
                 </View>
-                <Text style={[styles.td, styles.colColor]}>{item.color || '—'}</Text>
+                <View style={[styles.colColor, { flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'flex-end', gap: 3 }]}>
+                  <Text style={styles.td}>{item.color || '—'}</Text>
+                  {item.colorHex ? (
+                    <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: item.colorHex, border: `0.5px solid ${COLORS.border}` }} />
+                  ) : null}
+                </View>
                 <Text style={[styles.td, styles.colSize]}>{item.size || '—'}</Text>
                 <Text style={[styles.td, styles.colQty]}>{item.quantity}</Text>
                 <Text style={[styles.td, styles.colPrice]}>{formatCurrency(item.price)}</Text>
