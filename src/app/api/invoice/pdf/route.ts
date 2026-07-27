@@ -27,14 +27,19 @@ export async function POST(request: NextRequest) {
     return new Response('Missing order or storeInfo', { status: 400 });
   }
 
-  const qrCodeDataUrl = await generateTrackingQrCode(order.orderNumber, request.nextUrl.origin);
-  const documentElement = React.createElement(AuraInvoiceDocument, { order, storeInfo, qrCodeDataUrl }) as React.ReactElement<DocumentProps>;
-  const blob = await pdf(documentElement).toBlob();
+  try {
+    const qrCodeDataUrl = await generateTrackingQrCode(order.orderNumber, request.nextUrl.origin);
+    const documentElement = React.createElement(AuraInvoiceDocument, { order, storeInfo, qrCodeDataUrl }) as React.ReactElement<DocumentProps>;
+    const blob = await pdf(documentElement).toBlob();
 
-  return new Response(blob, {
-    headers: {
-      'Content-Type': 'application/pdf',
-      'Content-Disposition': `attachment; filename="AURA-Invoice-${getInvoiceNumber(order)}.pdf"`,
-    },
-  });
+    return new Response(blob, {
+      headers: {
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `attachment; filename="AURA-Invoice-${getInvoiceNumber(order)}.pdf"`,
+      },
+    });
+  } catch (err) {
+    console.error('Invoice PDF generation failed:', err);
+    return new Response('Failed to generate invoice PDF', { status: 500 });
+  }
 }
