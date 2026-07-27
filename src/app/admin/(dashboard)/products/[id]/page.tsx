@@ -544,6 +544,16 @@ export default function ProductEditorPage({ params }: { params: Promise<{ id: st
             </div>
 
             <div>
+              <label className="block text-xs font-medium text-[var(--admin-text-muted)] mb-1">الموسم (Season)</label>
+              <select className="w-full border border-[var(--admin-border-base)] bg-[var(--admin-bg-base)] text-[var(--admin-text-base)] rounded-[var(--admin-radius-md)] px-3 py-2 outline-none focus:border-[var(--admin-primary)] text-sm transition-colors" value={data.season} onChange={(e) => updateData({ season: e.target.value })}>
+                <option value="">كل المواسم</option>
+                <option value="summer">أزياء الصيف</option>
+                <option value="winter">أزياء الشتاء</option>
+              </select>
+              <p className="text-[11px] text-[var(--admin-text-subtle)] mt-1">يتحكم في ظهور المنتج داخل صفحات «أزياء الصيف» و«أزياء الشتاء» وقسم المتجر الموسمي.</p>
+            </div>
+
+            <div>
               <label className="block text-xs font-medium text-[var(--admin-text-muted)] mb-1">الماركة (Brand)</label>
               <select className="w-full border border-[var(--admin-border-base)] bg-[var(--admin-bg-base)] text-[var(--admin-text-base)] rounded-[var(--admin-radius-md)] px-3 py-2 outline-none focus:border-[var(--admin-primary)] text-sm transition-colors" value={data.brand} onChange={(e) => updateData({ brand: e.target.value })}>
                 <option value="">اختر الماركة...</option>
