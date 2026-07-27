@@ -33,10 +33,8 @@ export async function POST(request: Request) {
     try {
       order = await verifyOrderOwnership(admin, orderNumber, contact);
     } catch (err) {
-      return NextResponse.json(
-        { error: err instanceof Error ? err.message : 'حدث خطأ أثناء التحقق من الطلب' },
-        { status: 500 }
-      );
+      console.error('[reviews/eligibility] order ownership check failed', err);
+      return NextResponse.json({ error: 'حدث خطأ أثناء التحقق من الطلب' }, { status: 500 });
     }
 
     if (!order) {
@@ -53,7 +51,8 @@ export async function POST(request: Request) {
           .in('order_item_id', itemIds)
       : { data: [], error: null };
     if (error) {
-      return NextResponse.json({ error: error.message || 'حدث خطأ أثناء تحميل بيانات التقييم' }, { status: 500 });
+      console.error('[reviews/eligibility] failed to load reviews', error);
+      return NextResponse.json({ error: 'حدث خطأ أثناء تحميل بيانات التقييم' }, { status: 500 });
     }
 
     const reviewByItemId = new Map((existingReviews ?? []).map((r) => [r.order_item_id as string, r]));
@@ -98,9 +97,6 @@ export async function POST(request: Request) {
     });
   } catch (err) {
     console.error('[reviews/eligibility] unhandled exception', err);
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'حدث خطأ غير متوقع' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'حدث خطأ غير متوقع' }, { status: 500 });
   }
 }
