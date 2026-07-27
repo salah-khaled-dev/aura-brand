@@ -129,7 +129,8 @@ function TrackingContent({ c, whatsappUrl, storeInfo }: { c: typeof DEFAULT_CONT
         order.customerPhone || order.customerEmail || contact
       );
       setReviewEligibility(result);
-    } catch {
+    } catch (err) {
+      console.error('[tracking] review eligibility check failed', err);
       setReviewEligibility(null);
     }
   }, [order, contact]);

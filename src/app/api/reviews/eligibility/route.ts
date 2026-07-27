@@ -26,69 +26,81 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'رقم الطلب وبيانات التواصل مطلوبة' }, { status: 400 });
   }
 
-  const admin = createAdminClient();
-
-  let order;
   try {
-    order = await verifyOrderOwnership(admin, orderNumber, contact);
-  } catch {
-    return NextResponse.json({ error: 'حدث خطأ أثناء التحقق من الطلب' }, { status: 500 });
-  }
+    const admin = createAdminClient();
 
-  if (!order) {
-    return NextResponse.json({ error: 'لم يتم العثور على طلب مطابق لهذه البيانات' }, { status: 404 });
-  }
+    let order;
+    try {
+      order = await verifyOrderOwnership(admin, orderNumber, contact);
+    } catch (err) {
+      return NextResponse.json(
+        { error: err instanceof Error ? err.message : 'حدث خطأ أثناء التحقق من الطلب' },
+        { status: 500 }
+      );
+    }
 
-  const items = order.status === 'delivered' ? order.order_items : [];
-  const itemIds = items.map((i) => i.id);
+    if (!order) {
+      return NextResponse.json({ error: 'لم يتم العثور على طلب مطابق لهذه البيانات' }, { status: 404 });
+    }
 
-  const { data: existingReviews, error } = itemIds.length
-    ? await admin
-        .from('reviews')
-        .select('id, order_item_id, rating, title, content, size_fit, recommended, images, status, created_at')
-        .in('order_item_id', itemIds)
-    : { data: [], error: null };
-  if (error) {
-    return NextResponse.json({ error: 'حدث خطأ أثناء تحميل بيانات التقييم' }, { status: 500 });
-  }
+    const items = order.status === 'delivered' ? order.order_items : [];
+    const itemIds = items.map((i) => i.id);
 
-  const reviewByItemId = new Map((existingReviews ?? []).map((r) => [r.order_item_id as string, r]));
+    const { data: existingReviews, error } = itemIds.length
+      ? await admin
+          .from('reviews')
+          .select('id, order_item_id, rating, title, content, size_fit, recommended, images, status, created_at')
+          .in('order_item_id', itemIds)
+      : { data: [], error: null };
+    if (error) {
+      return NextResponse.json({ error: error.message || 'حدث خطأ أثناء تحميل بيانات التقييم' }, { status: 500 });
+    }
 
-  const result = (order.status === 'delivered' ? order.order_items : [])
-    .filter((item) => !productId || item.product_id === productId)
-    .map((item) => {
-      const review = reviewByItemId.get(item.id);
-      const editableUntil = review ? new Date(new Date(review.created_at).getTime() + EDIT_WINDOW_MS).toISOString() : null;
-      return {
-        orderItemId: item.id,
-        productId: item.product_id,
-        productName: item.product_name,
-        productImage: item.image_url,
-        size: item.size,
-        color: item.color_name,
-        eligible: item.product_id !== null,
-        reviewed: !!review,
-        review: review
-          ? {
-              id: review.id,
-              rating: review.rating,
-              title: review.title,
-              content: review.content,
-              sizeFit: review.size_fit,
-              recommended: review.recommended,
-              images: review.images,
-              status: review.status,
-              createdAt: review.created_at,
-              editableUntil,
-            }
-          : null,
-      };
+    const reviewByItemId = new Map((existingReviews ?? []).map((r) => [r.order_item_id as string, r]));
+
+    const result = (order.status === 'delivered' ? order.order_items : [])
+      .filter((item) => !productId || item.product_id === productId)
+      .map((item) => {
+        const review = reviewByItemId.get(item.id);
+        const createdAtMs = review ? new Date(review.created_at).getTime() : NaN;
+        const editableUntil = review && !Number.isNaN(createdAtMs) ? new Date(createdAtMs + EDIT_WINDOW_MS).toISOString() : null;
+        return {
+          orderItemId: item.id,
+          productId: item.product_id,
+          productName: item.product_name,
+          productImage: item.image_url,
+          size: item.size,
+          color: item.color_name,
+          eligible: item.product_id !== null,
+          reviewed: !!review,
+          review: review
+            ? {
+                id: review.id,
+                rating: review.rating,
+                title: review.title,
+                content: review.content,
+                sizeFit: review.size_fit,
+                recommended: review.recommended,
+                images: review.images,
+                status: review.status,
+                createdAt: review.created_at,
+                editableUntil,
+              }
+            : null,
+        };
+      });
+
+    return NextResponse.json({
+      orderId: order.id,
+      orderNumber: order.order_number,
+      orderStatus: order.status,
+      items: result,
     });
-
-  return NextResponse.json({
-    orderId: order.id,
-    orderNumber: order.order_number,
-    orderStatus: order.status,
-    items: result,
-  });
+  } catch (err) {
+    console.error('[reviews/eligibility] unhandled exception', err);
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : 'حدث خطأ غير متوقع' },
+      { status: 500 }
+    );
+  }
 }

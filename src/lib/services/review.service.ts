@@ -129,14 +129,14 @@ function rowToReview(row: ReviewRow): Review {
 async function postJson<T>(url: string, body: unknown): Promise<T> {
   const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data?.error || 'حدث خطأ غير متوقع');
+  if (!res.ok) throw new Error(data?.error || `حدث خطأ غير متوقع (HTTP ${res.status})`);
   return data as T;
 }
 
 async function postForm<T>(url: string, formData: FormData): Promise<T> {
   const res = await fetch(url, { method: 'POST', body: formData });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data?.error || 'حدث خطأ غير متوقع');
+  if (!res.ok) throw new Error(data?.error || `حدث خطأ غير متوقع (HTTP ${res.status})`);
   return data as T;
 }
 
