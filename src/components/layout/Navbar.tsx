@@ -17,6 +17,18 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import Logo from "@/components/Logo";
 import { getWhatsAppUrl } from "@/config/whatsapp";
 
+/**
+ * A link is active on an exact pathname match, or on any nested/dynamic
+ * child route (e.g. `/collections/summer-fashion` under a `/collections`
+ * link). Segment-boundary aware so `/shop` doesn't also light up for an
+ * unrelated `/shop-something` route.
+ */
+function isNavLinkActive(pathname: string, href: string): boolean {
+  const hrefPath = href.split("?")[0];
+  if (hrefPath === "/") return pathname === "/";
+  return pathname === hrefPath || pathname.startsWith(`${hrefPath}/`);
+}
+
 export default function Navbar() {
   const { cart, wishlist, cartCount, cartSubtotal, isCartOpen, setCartOpen, removeFromCart, updateQuantity } = useStore();
   const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -140,8 +152,8 @@ export default function Navbar() {
 
   const DEFAULT_LEFT_LINKS = [
     { name: "الرئيسية", path: "/" },
-    { name: "أزياء الشتاء", path: "/shop?category=winter" },
-    { name: "أزياء الصيف", path: "/shop?category=summer" },
+    { name: "أزياء الشتاء", path: "/winter-fashion" },
+    { name: "أزياء الصيف", path: "/summer-fashion" },
     { name: "المتجر", path: "/shop" },
   ];
   const DEFAULT_RIGHT_LINKS = [
@@ -211,7 +223,7 @@ export default function Navbar() {
             {/* Desktop Left Links */}
             <nav className="hidden md:flex items-center gap-9 lg:gap-10">
               {leftLinks.map((link) => {
-                const isActive = pathname === link.path;
+                const isActive = isNavLinkActive(pathname, link.path);
                 return (
                   <Link
                     key={link.path}
@@ -249,7 +261,7 @@ export default function Navbar() {
             {/* Desktop Right Links */}
             <nav className="hidden md:flex items-center gap-9 lg:gap-10 me-4 lg:me-8">
               {rightLinks.map((link) => {
-                const isActive = pathname === link.path;
+                const isActive = isNavLinkActive(pathname, link.path);
                 return (
                   <Link
                     key={link.path}
@@ -361,20 +373,25 @@ export default function Navbar() {
                   visible: { opacity: 1, transition: { staggerChildren: 0.1, delayChildren: 0.2 } }
                 }}
               >
-                {[...leftLinks, ...rightLinks].map((link) => (
-                  <motion.div key={link.path} variants={{
-                    hidden: { opacity: 0, x: 20 },
-                    visible: { opacity: 1, x: 0, transition: { duration: 0.8, ease: [0.25, 0.1, 0.25, 1] } }
-                  }}>
-                    <Link
-                      href={link.path}
-                      onClick={() => setMobileMenuOpen(false)}
-                      className="font-serif text-3xl font-light text-text-primary hover:text-accent transition-colors block"
-                    >
-                      {link.name}
-                    </Link>
-                  </motion.div>
-                ))}
+                {[...leftLinks, ...rightLinks].map((link) => {
+                  const isActive = isNavLinkActive(pathname, link.path);
+                  return (
+                    <motion.div key={link.path} variants={{
+                      hidden: { opacity: 0, x: 20 },
+                      visible: { opacity: 1, x: 0, transition: { duration: 0.8, ease: [0.25, 0.1, 0.25, 1] } }
+                    }}>
+                      <Link
+                        href={link.path}
+                        onClick={() => setMobileMenuOpen(false)}
+                        className={`font-serif text-3xl font-light transition-colors block ${
+                          isActive ? "text-accent" : "text-text-primary hover:text-accent"
+                        }`}
+                      >
+                        {link.name}
+                      </Link>
+                    </motion.div>
+                  );
+                })}
               </motion.div>
 
               {/* Footer Account / Cart Actions */}
@@ -725,7 +742,7 @@ export default function Navbar() {
         <Link
           href="/"
           className={`flex flex-col items-center justify-center gap-1 w-12 text-center transition-colors ${
-            pathname === "/" ? "text-accent font-medium" : "text-text-secondary hover:text-accent"
+            isNavLinkActive(pathname, "/") ? "text-accent font-medium" : "text-text-secondary hover:text-accent"
           }`}
         >
           <PiHouseThin className="w-6 h-6" />
@@ -735,7 +752,7 @@ export default function Navbar() {
         <Link
           href="/shop"
           className={`flex flex-col items-center justify-center gap-1 w-12 text-center transition-colors ${
-            pathname.startsWith("/shop") ? "text-accent font-medium" : "text-text-secondary hover:text-accent"
+            isNavLinkActive(pathname, "/shop") ? "text-accent font-medium" : "text-text-secondary hover:text-accent"
           }`}
         >
           <PiCompassThin className="w-6 h-6" />
@@ -758,7 +775,7 @@ export default function Navbar() {
         <Link
           href="/wishlist"
           className={`flex flex-col items-center justify-center gap-1 w-12 text-center transition-colors relative ${
-            pathname === "/wishlist" ? "text-accent font-medium" : "text-text-secondary hover:text-accent"
+            isNavLinkActive(pathname, "/wishlist") ? "text-accent font-medium" : "text-text-secondary hover:text-accent"
           }`}
         >
           <PiHeartThin className="w-6 h-6" />
