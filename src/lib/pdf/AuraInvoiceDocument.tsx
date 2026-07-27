@@ -118,6 +118,13 @@ const styles = StyleSheet.create({
   th: { fontSize: 8, fontWeight: 'bold', color: COLORS.textMuted, textAlign: 'right' },
   td: { fontSize: 8.5, textAlign: 'right' },
   productImage: { width: 28, height: 36, borderRadius: 4, objectFit: 'cover' },
+  productImageBox: {
+    width: 28, height: 36, borderRadius: 4,
+    backgroundColor: COLORS.beige,
+    border: `1px solid ${COLORS.border}`,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  productImagePlaceholder: { fontSize: 8, color: COLORS.textMuted },
   colImage: { width: '10%' },
   colName: { width: '30%', paddingRight: 6 },
   colColor: { width: '12%' },
@@ -272,9 +279,9 @@ export function AuraInvoiceDocument({ order, storeInfo, qrCodeDataUrl }: AuraInv
         <View style={styles.twoCol}>
           <View style={[styles.card, styles.col]}>
             <Text style={styles.cardTitle}>بيانات العميل</Text>
-            <View style={styles.row}><Text style={styles.label}>الاسم</Text><Text style={styles.value}>{order.customerName}</Text></View>
-            <View style={styles.row}><Text style={styles.label}>الهاتف</Text><Text style={styles.value}>{order.customerPhone || '—'}</Text></View>
-            <View style={styles.row}><Text style={styles.label}>البريد الإلكتروني</Text><Text style={styles.value}>{order.customerEmail || '—'}</Text></View>
+            <View style={styles.row}><Text style={styles.label}>الاسم</Text><Text style={[styles.value, { maxWidth: '70%' }]}>{order.customerName}</Text></View>
+            <View style={styles.row}><Text style={styles.label}>الهاتف</Text><Text style={[styles.value, { maxWidth: '70%' }]}>{order.customerPhone || '—'}</Text></View>
+            <View style={styles.row}><Text style={styles.label}>البريد الإلكتروني</Text><Text style={[styles.value, { maxWidth: '70%' }]}>{order.customerEmail || '—'}</Text></View>
             <View style={styles.row}><Text style={styles.label}>عنوان التوصيل</Text><Text style={[styles.value, { maxWidth: '70%' }]}>{order.shippingAddress}</Text></View>
           </View>
           <View style={[styles.card, styles.col]}>
@@ -300,8 +307,14 @@ export function AuraInvoiceDocument({ order, storeInfo, qrCodeDataUrl }: AuraInv
             {order.items.map((item) => (
               <View key={item.id} style={styles.tableRow}>
                 <View style={styles.colImage}>
-                  {/* eslint-disable-next-line jsx-a11y/alt-text -- react-pdf's Image (PDF renderer, not HTML/next Image) has no alt prop */}
-                  {item.image ? <Image src={item.image} style={styles.productImage} /> : null}
+                  <View style={styles.productImageBox}>
+                    {item.image ? (
+                      /* eslint-disable-next-line jsx-a11y/alt-text -- react-pdf's Image (PDF renderer, not HTML/next Image) has no alt prop */
+                      <Image src={item.image} style={styles.productImage} />
+                    ) : (
+                      <Text style={styles.productImagePlaceholder}>—</Text>
+                    )}
+                  </View>
                 </View>
                 <View style={styles.colName}>
                   <Text style={styles.td}>{item.productName}</Text>
@@ -322,11 +335,11 @@ export function AuraInvoiceDocument({ order, storeInfo, qrCodeDataUrl }: AuraInv
         </View>
 
         {/* Summary */}
-        <View style={{ flexDirection: 'row-reverse' }}>
+        <View style={{ flexDirection: 'row-reverse' }} wrap={false}>
           <View style={styles.summaryCard}>
             <View style={styles.row}><Text style={styles.label}>المجموع الفرعي</Text><Text style={styles.value}>{formatCurrency(order.subtotal)}</Text></View>
             {order.discount > 0 && (
-              <View style={styles.row}><Text style={styles.label}>الخصم</Text><Text style={[styles.value, { color: '#2F6B3A' }]}>-{formatCurrency(order.discount)}</Text></View>
+              <View style={styles.row}><Text style={styles.label}>الخصم{order.couponCode ? ` (كوبون: ${order.couponCode})` : ''}</Text><Text style={[styles.value, { color: '#2F6B3A' }]}>-{formatCurrency(order.discount)}</Text></View>
             )}
             <View style={styles.row}><Text style={styles.label}>الشحن</Text><Text style={styles.value}>{formatCurrency(order.shipping)}</Text></View>
             {order.tax > 0 && (

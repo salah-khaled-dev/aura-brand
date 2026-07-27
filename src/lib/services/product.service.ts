@@ -30,8 +30,25 @@ type ProductRow = Tables<'products'> & {
 /** Maps a color's client-side temp id (or its existing DB id) to its saved DB id. */
 type ColorIdMap = Map<string, string>;
 
+// `products` now has two FK paths to `product_colors` (product_colors.product_id →
+// products.id, and the newer products.default_variant_id → product_colors.id), so
+// PostgREST can no longer infer which relationship to embed — the FK constraint
+// name must be given explicitly to pick the "colors belonging to this product" side.
 const SELECT_WITH_RELATIONS =
-  '*, product_images(*), product_variants(*), product_colors(*, product_color_images(*)), categories(name_ar)';
+  '*, product_images(*), product_variants(*), product_colors!product_colors_product_id_fkey(*, product_color_images(*)), categories(name_ar)';
+
+/**
+ * Same shape as SELECT_WITH_RELATIONS but with `cost_price`/`costing`/
+ * `revisions` (internal COGS + historical cost snapshots) named out instead
+ * of `*`. Required for the anon role: the 20260727120000 migration revokes
+ * anon's whole-table SELECT and grants column-level SELECT that excludes
+ * those three columns, so a literal `*` would make the whole query fail
+ * with a permission error (Postgres expands `*` to every column, including
+ * the ones anon can no longer read). This is the query the storefront must
+ * use — see storefront-product.service.ts.
+ */
+const SELECT_PUBLIC_SAFE =
+  'id, name_ar, name_en, slug, sku, description_ar, description_en, short_description_ar, short_description_en, category_id, price, sale_price, stock, is_featured, is_active, collection, collection_name, seo_title, seo_description, seo_keywords, barcode, low_stock_limit, material, weight, brand, tags, is_best_seller, is_new_arrival, status, publish_at, hide_at, archive_at, canonical_url, og_title, og_description, hover_image_url, badge, details, fabric, packaging, stats, default_variant_id, created_at, updated_at, product_images(*), product_variants(*), product_colors!product_colors_product_id_fkey(*, product_color_images(*)), categories(name_ar)';
 
 const supabase = createClient();
 
@@ -274,6 +291,31 @@ function productToUpdateRow(data: Partial<Product>, categoryId: string | undefin
   if (data.stats !== undefined) row.stats = data.stats as unknown as TablesUpdate<'products'>['stats'];
   if (data.revisions !== undefined) row.revisions = data.revisions as unknown as TablesUpdate<'products'>['revisions'];
   return row;
+}
+
+const COSTING_FIELD_LABELS: Record<keyof Product['costing'], string> = {
+  fabric: 'تكلفة القماش',
+  accessories: 'تكلفة الإكسسوارات',
+  manufacturing: 'تكلفة التصنيع',
+  printing: 'تكلفة الطباعة',
+  packaging: 'تكلفة التغليف',
+  photography: 'تكلفة التصوير',
+  shipping: 'تكلفة الشحن',
+  marketing: 'تكلفة التسويق',
+  taxes: 'الضرائب',
+  marketplaceFees: 'عمولات المنصات',
+  otherExpenses: 'مصاريف أخرى',
+};
+
+/** Nothing upstream (Zod schemas in product.schema.ts are unused dead code) rejects a negative cost component before it reaches the DB — a negative entry silently inflates profit/margin/markup. */
+function validateCosting(costing: Product['costing'] | undefined): void {
+  if (!costing) return;
+  for (const key of Object.keys(COSTING_FIELD_LABELS) as (keyof Product['costing'])[]) {
+    const value = costing[key];
+    if (value !== undefined && value !== null && value < 0) {
+      throw new Error(`${COSTING_FIELD_LABELS[key]} لا يمكن أن تكون سالبة`);
+    }
+  }
 }
 
 function mapProductError(error: { code?: string; message: string }): Error {
@@ -531,6 +573,24 @@ class SupabaseProductRepositoryImpl implements IProductRepository {
       .slice(0, limit);
   }
 
+  /**
+   * The only product read allowed for unauthenticated storefront callers.
+   * Uses SELECT_PUBLIC_SAFE (never asks Postgres for cost_price/costing/
+   * revisions) so internal COGS/profit data can't reach the browser even if
+   * the caller's own filtering is skipped or buggy — enforced at the DB
+   * grant level (see 20260727120000 migration), not just in JS.
+   */
+  async getPublicProducts(): Promise<Product[]> {
+    const { data, error } = await supabase
+      .from('products')
+      .select(SELECT_PUBLIC_SAFE)
+      .order('created_at', { ascending: false });
+    if (error) throw mapProductError(error);
+
+    const products = (data as ProductRow[]).map(rowToProduct);
+    return products.filter(p => p.status === 'published');
+  }
+
   // --- CRUD OPERATIONS ---
 
   async getProducts(filters?: ProductFilters): Promise<Product[]> {
@@ -596,6 +656,8 @@ class SupabaseProductRepositoryImpl implements IProductRepository {
     if (data.comparePrice > 0 && data.comparePrice < data.price) {
       throw new Error('سعر المقارنة يجب أن يكون أكبر من أو يساوي السعر الحالي');
     }
+    validateCosting(data.costing);
+    if (data.costPrice !== undefined && data.costPrice < 0) throw new Error('سعر التكلفة لا يمكن أن يكون سالباً');
 
     const categoryId = await resolveCategoryId(data.category);
     const { data: row, error } = await supabase
@@ -640,6 +702,8 @@ class SupabaseProductRepositoryImpl implements IProductRepository {
     if (data.colorVariants !== undefined && data.colorVariants.length === 0) {
       throw new Error('يجب أن يحتوي المنتج على لون واحد على الأقل');
     }
+    validateCosting(data.costing);
+    if (data.costPrice !== undefined && data.costPrice < 0) throw new Error('سعر التكلفة لا يمكن أن يكون سالباً');
 
     const categoryId = data.category !== undefined ? await resolveCategoryId(data.category) : undefined;
 

@@ -164,9 +164,9 @@ export default function InvoiceView({ order, storeInfo, hideActions }: InvoiceVi
           <div className="bg-background-primary border border-brand-border rounded-xl p-5">
             <h3 className="font-display text-base text-text-primary mb-3">بيانات العميل</h3>
             <div className="space-y-2 text-xs font-sans">
-              <div className="flex justify-between"><span className="text-text-secondary">الاسم</span><span className="font-bold text-text-primary">{order.customerName}</span></div>
-              <div className="flex justify-between"><span className="text-text-secondary">الهاتف</span><span className="font-bold text-text-primary" dir="ltr">{order.customerPhone || "—"}</span></div>
-              <div className="flex justify-between"><span className="text-text-secondary">البريد الإلكتروني</span><span className="font-bold text-text-primary">{order.customerEmail || "—"}</span></div>
+              <div className="flex justify-between gap-3"><span className="text-text-secondary shrink-0">الاسم</span><span className="font-bold text-text-primary text-end">{order.customerName}</span></div>
+              <div className="flex justify-between gap-3"><span className="text-text-secondary shrink-0">الهاتف</span><span className="font-bold text-text-primary text-end" dir="ltr">{order.customerPhone || "—"}</span></div>
+              <div className="flex justify-between gap-3"><span className="text-text-secondary shrink-0">البريد الإلكتروني</span><span className="font-bold text-text-primary text-end break-all">{order.customerEmail || "—"}</span></div>
               <div className="flex justify-between gap-3"><span className="text-text-secondary shrink-0">عنوان التوصيل</span><span className="font-bold text-text-primary text-end">{order.shippingAddress}</span></div>
             </div>
           </div>
@@ -202,9 +202,18 @@ export default function InvoiceView({ order, storeInfo, hideActions }: InvoiceVi
                 {order.items.map((item) => (
                   <tr key={item.id}>
                     <td className="py-3 px-3 w-14">
-                      {item.image ? (
-                        <img src={item.image} alt={item.productName} className="w-10 h-12 object-cover rounded-md border border-brand-border" />
-                      ) : null}
+                      <div className="w-10 h-12 rounded-md border border-brand-border bg-background-tertiary flex items-center justify-center overflow-hidden">
+                        {item.image ? (
+                          <img
+                            src={item.image}
+                            alt={item.productName}
+                            className="w-full h-full object-cover"
+                            onError={(e) => { e.currentTarget.style.display = "none"; }}
+                          />
+                        ) : (
+                          <span className="text-text-secondary text-[10px]">—</span>
+                        )}
+                      </div>
                     </td>
                     <td className="py-3 px-3">
                       <p className="font-bold text-text-primary">{item.productName}</p>
@@ -235,10 +244,10 @@ export default function InvoiceView({ order, storeInfo, hideActions }: InvoiceVi
 
         {/* Summary */}
         <div className="flex justify-start mb-8">
-          <div className="w-full sm:w-80 bg-background-primary border border-brand-border rounded-xl p-5 space-y-2 text-xs font-sans">
+          <div className="w-full sm:w-80 bg-background-primary border border-brand-border rounded-xl p-5 space-y-2 text-xs font-sans break-inside-avoid">
             <div className="flex justify-between text-text-secondary"><span>المجموع الفرعي</span><span className="font-bold text-text-primary">{formatCurrency(order.subtotal)}</span></div>
             {order.discount > 0 && (
-              <div className="flex justify-between text-green-700"><span>الخصم</span><span className="font-bold">-{formatCurrency(order.discount)}</span></div>
+              <div className="flex justify-between text-green-700"><span>الخصم{order.couponCode ? ` (كوبون: ${order.couponCode})` : ''}</span><span className="font-bold">-{formatCurrency(order.discount)}</span></div>
             )}
             <div className="flex justify-between text-text-secondary"><span>الشحن</span><span className="font-bold text-text-primary">{formatCurrency(order.shipping)}</span></div>
             {order.tax > 0 && (

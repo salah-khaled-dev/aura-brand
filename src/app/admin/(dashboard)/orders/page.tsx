@@ -132,8 +132,8 @@ export default function OrdersPage() {
       toast.success(`تم إنشاء الطلب ${created.orderNumber}`);
       setCreateOpen(false);
       loadOrders();
-    } catch {
-      toast.error(adminAr.toasts.unexpectedError);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : adminAr.toasts.unexpectedError);
     } finally {
       setCreating(false);
     }

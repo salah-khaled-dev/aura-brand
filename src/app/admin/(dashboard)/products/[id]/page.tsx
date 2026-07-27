@@ -84,6 +84,7 @@ export default function ProductEditorPage({ params }: { params: Promise<{ id: st
         costing: { fabric: 0, accessories: 0, manufacturing: 0, printing: 0, packaging: 0, photography: 0, shipping: 0, marketing: 0, taxes: 0, marketplaceFees: 0, otherExpenses: 0 }
       };
       setProductData(empty);
+      updateData(empty);
       setInitialLoading(false);
     } else {
       ProductService.getProduct(id).then(res => {
@@ -332,11 +333,11 @@ export default function ProductEditorPage({ params }: { params: Promise<{ id: st
                   </div>
                   <div className="flex flex-col gap-1">
                     <span className="text-sm font-medium text-[var(--admin-text-subtle)]">سعر البيع</span>
-                    <input type="number" className="text-2xl font-bold text-[var(--admin-primary)] bg-transparent outline-none border-b border-[var(--admin-primary)]/30 focus:border-[var(--admin-primary)] w-full transition-colors" value={data.price} onChange={(e) => updateData({ price: Number(e.target.value) })} />
+                    <input type="number" min={0} className="text-2xl font-bold text-[var(--admin-primary)] bg-transparent outline-none border-b border-[var(--admin-primary)]/30 focus:border-[var(--admin-primary)] w-full transition-colors" value={data.price} onChange={(e) => updateData({ price: Number(e.target.value) })} />
                   </div>
                   <div className="flex flex-col gap-1">
                     <span className="text-sm font-medium text-[var(--admin-text-subtle)]">سعر المقارنة (قبل الخصم)</span>
-                    <input type="number" className="text-2xl font-bold text-[var(--admin-text-subtle)] line-through bg-transparent outline-none border-b border-[var(--admin-border-base)] focus:border-[var(--admin-border-strong)] w-full transition-colors" value={data.comparePrice} onChange={(e) => updateData({ comparePrice: Number(e.target.value) })} />
+                    <input type="number" min={0} className="text-2xl font-bold text-[var(--admin-text-subtle)] line-through bg-transparent outline-none border-b border-[var(--admin-border-base)] focus:border-[var(--admin-border-strong)] w-full transition-colors" value={data.comparePrice} onChange={(e) => updateData({ comparePrice: Number(e.target.value) })} />
                   </div>
 
                   <div className="flex flex-col gap-1 mt-4">
@@ -348,7 +349,7 @@ export default function ProductEditorPage({ params }: { params: Promise<{ id: st
                     <span className={`text-2xl font-bold ${margin >= 40 ? 'text-[var(--admin-success)]' : margin > 20 ? 'text-[var(--admin-warning)]' : 'text-[var(--admin-danger)]'}`}>{margin}%</span>
                   </div>
                   <div className="flex flex-col gap-1 mt-4">
-                    <span className="text-sm font-medium text-[var(--admin-text-subtle)]">العائد على الاستثمار (ROI)</span>
+                    <span className="text-sm font-medium text-[var(--admin-text-subtle)]">نسبة الـ Markup</span>
                     <span className={`text-2xl font-bold ${Number(roi) > 100 ? 'text-[var(--admin-success)]' : 'text-[var(--admin-warning)]'}`}>{roi}%</span>
                   </div>
                 </div>
@@ -373,9 +374,10 @@ export default function ProductEditorPage({ params }: { params: Promise<{ id: st
                       <div className="relative">
                         <input
                           type="number"
+                          min={0}
                           className="w-full border border-[var(--admin-border-base)] bg-[var(--admin-bg-base)] text-[var(--admin-text-base)] rounded-[var(--admin-radius-md)] px-4 py-2 outline-none focus:border-[var(--admin-primary)] pr-12 font-mono text-left transition-colors"
                           value={data.costing[key as keyof Product['costing']] || 0}
-                          onChange={(e) => handleCostingChange(key as keyof Product['costing'], Number(e.target.value))}
+                          onChange={(e) => handleCostingChange(key as keyof Product['costing'], Math.max(0, Number(e.target.value)))}
                         />
                         <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--admin-text-subtle)] text-sm">ج.م</span>
                       </div>

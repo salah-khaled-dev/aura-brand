@@ -285,8 +285,8 @@ export default function CheckoutPage() {
       setStep(4);
       clearCart();
       showNotification("تم إنشاء طلبك بنجاح. يمكنك الآن تحميل الفاتورة أو تتبع طلبك.", "success");
-    } catch {
-      showNotification("تعذر إرسال الطلب، يرجى المحاولة مرة أخرى", "error");
+    } catch (err) {
+      showNotification(err instanceof Error ? err.message : "تعذر إرسال الطلب، يرجى المحاولة مرة أخرى", "error");
     } finally {
       setIsSubmitting(false);
     }

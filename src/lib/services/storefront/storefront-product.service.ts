@@ -18,9 +18,30 @@
 import { ProductService } from '@/lib/services/product.service';
 import type { Product } from '@/data/mock/products';
 
+const ZERO_COSTING = {
+  fabric: 0, accessories: 0, manufacturing: 0, printing: 0, packaging: 0,
+  photography: 0, shipping: 0, marketing: 0, taxes: 0, marketplaceFees: 0, otherExpenses: 0,
+};
+
+/**
+ * `ProductService.getPublicProducts()` never asks Postgres for `cost_price`/
+ * `costing`/`revisions` in the first place — the anon Postgres role has had
+ * column-level SELECT on those three columns revoked (see the
+ * 20260727120000 migration), so even a direct REST call with the public
+ * anon key can't read them. This zeroing is defense-in-depth on top of that
+ * DB-level enforcement, not the primary guard — don't swap the call below
+ * back to `ProductService.getProducts()` (which selects `*` and would 403
+ * for anon under the new grants, since `*` is expanded to every column
+ * including the restricted ones).
+ */
+function stripInternalCostFields(product: Product): Product {
+  return { ...product, costPrice: 0, costing: ZERO_COSTING, revisions: [] };
+}
+
 /** All storefront-visible products (status === 'published'). */
 export async function getPublishedProducts(): Promise<Product[]> {
-  return ProductService.getProducts({ status: 'published' });
+  const products = await ProductService.getPublicProducts();
+  return products.map(stripInternalCostFields);
 }
 
 /** A single published product by id, or undefined (draft/hidden/archived/unknown/not found). */

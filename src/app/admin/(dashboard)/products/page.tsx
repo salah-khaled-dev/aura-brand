@@ -180,7 +180,7 @@ export default function ProductsPage() {
           onChange={(e) => setSeasonFilter(e.target.value as typeof seasonFilter)}
           className="h-10 px-3 border border-[var(--admin-border-base)] rounded-[var(--admin-radius-md)] bg-[var(--admin-bg-surface)] text-sm text-[var(--admin-text-base)] outline-none focus:ring-2 focus:ring-[var(--admin-primary)]"
         >
-          <option value="all">الفئة: المتجر (الكل)</option>
+          <option value="all">الموسم: الكل</option>
           <option value="winter">أزياء الشتاء</option>
           <option value="summer">أزياء الصيف</option>
         </select>

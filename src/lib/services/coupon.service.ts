@@ -204,7 +204,7 @@ export const CouponService = {
       }
       let amount = 0;
       if (coupon.type === 'fixed') {
-        amount = coupon.discountValue;
+        amount = Math.min(coupon.discountValue, orderSubtotal);
       } else if (coupon.type === 'percentage') {
         amount = (orderSubtotal * coupon.discountValue) / 100;
         if (coupon.maxDiscountValue && amount > coupon.maxDiscountValue) amount = coupon.maxDiscountValue;
@@ -219,7 +219,7 @@ export const CouponService = {
     }
     let amount = 0;
     if (match.type === 'fixed') {
-      amount = match.value;
+      amount = Math.min(match.value, orderSubtotal);
     } else if (match.type === 'percentage') {
       amount = (orderSubtotal * match.value) / 100;
       if (match.max_discount_amount && amount > match.max_discount_amount) amount = match.max_discount_amount;
